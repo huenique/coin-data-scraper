@@ -6,6 +6,24 @@ from types import TracebackType
 from typing import Any, Dict, Optional, Type, Union
 from urllib.parse import urlencode
 
+ENDPOINT_PREFIX = "/"
+HEADER_CONTENT_TYPE = "Content-Type"
+JSON_CONTENT_TYPE = "application/json"
+HTTP_ERROR_FORMAT = "HTTP {status_code} Error"
+
+
+def build_url(endpoint: str, params: Optional[Dict[str, str]] = None) -> str:
+    """Constructs a URL with the given endpoint and query parameters."""
+    url = f"{ENDPOINT_PREFIX}{endpoint}"
+    if params:
+        url += f"?{urlencode(params)}"
+    return url
+
+
+def build_headers(headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    """Creates a copy of header dict or returns an empty one."""
+    return headers.copy() if headers else {}
+
 
 class JSONConvertible(ABC):
     @abstractmethod
@@ -37,7 +55,8 @@ class APIResponse(JSONConvertible, StatusRaisable):
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
-            raise Exception(self.error or f"HTTP {self.status_code} Error")
+            msg = self.error or HTTP_ERROR_FORMAT.format(status_code=self.status_code)
+            raise Exception(msg)
 
 
 class APIRequest:
@@ -72,16 +91,14 @@ class APIRequest:
         json_data: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
     ) -> APIResponse:
-        url = f"/{endpoint}"
-        if params:
-            url += f"?{urlencode(params)}"
-        req_headers = headers.copy() if headers else {}
+        url = build_url(endpoint, params=params)
+        req_headers = build_headers(headers)
         body = None
 
         if json_data:
             body = json.dumps(json_data)
-            if "Content-Type" not in req_headers:
-                req_headers["Content-Type"] = "application/json"
+            if HEADER_CONTENT_TYPE not in req_headers:
+                req_headers[HEADER_CONTENT_TYPE] = JSON_CONTENT_TYPE
         elif data:
             body = data
 
