@@ -1,5 +1,6 @@
 from sqlalchemy import (
     TIMESTAMP,
+    Boolean,
     Column,
     ForeignKey,
     Integer,
@@ -55,6 +56,22 @@ class MarketCapHistory(Base):
     recorded_at = Column(TIMESTAMP, default=func.now())
 
     coin = relationship("Coin", back_populates="market_caps")
+
+
+class BondingCurve(Base):
+    __tablename__ = "bonding_curve"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(255), unique=True, nullable=False)
+    discriminator: Column[Numeric[int]] = Column(Numeric, nullable=False)
+    virtual_token_reserves: Column[Numeric[int]] = Column(Numeric, nullable=False)
+    virtual_sol_reserves: Column[Numeric[int]] = Column(Numeric, nullable=False)
+    real_token_reserves: Column[Numeric[int]] = Column(Numeric, nullable=False)
+    real_sol_reserves: Column[Numeric[int]] = Column(Numeric, nullable=False)
+    token_total_supply: Column[Numeric[int]] = Column(Numeric, nullable=False)
+    complete = Column(Boolean, default=False)
+    created_at = Column(TIMESTAMP, default=func.now())
+    updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
 
 
 Base.metadata.create_all(engine)
