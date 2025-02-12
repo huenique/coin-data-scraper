@@ -1,8 +1,43 @@
 import http.client
 import json
+from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass
 from types import TracebackType
 from typing import Any, Dict, Optional, Type, Union
 from urllib.parse import urlencode
+
+
+class JSONConvertible(ABC):
+    @abstractmethod
+    def to_json(self) -> str:
+        """
+        Convert the instance to a JSON string.
+        External modules can implement this interface to provide custom JSON conversion.
+        """
+        pass
+
+
+class StatusRaisable(ABC):
+    @abstractmethod
+    def raise_for_status(self) -> None:
+        """
+        Raise an exception if the status code indicates an error.
+        """
+        pass
+
+
+@dataclass
+class APIResponse(JSONConvertible, StatusRaisable):
+    status_code: int
+    error: Optional[str] = None
+    body: Optional[Any] = None
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise Exception(self.error or f"HTTP {self.status_code} Error")
 
 
 class APIRequest:
@@ -26,9 +61,6 @@ class APIRequest:
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
-        _ = exc_type, exc_val, exc_tb
-
-        self.close()
         self.close()
 
     def request(
@@ -39,7 +71,7 @@ class APIRequest:
         data: Optional[str] = None,
         json_data: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-    ) -> Union[Dict[str, Any], str]:
+    ) -> APIResponse:
         url = f"/{endpoint}"
         if params:
             url += f"?{urlencode(params)}"
@@ -56,17 +88,20 @@ class APIRequest:
         try:
             self.conn.request(method, url, body=body, headers=req_headers)
             response = self.conn.getresponse()
-            result = self._handle_response(response)
+            return self._handle_response(response)
         except Exception as err:
-            result = {"error": str(err)}
-        return result
+            return APIResponse(
+                status_code=0,
+                error=str(err),
+                body=None,
+            )
 
     def get(
         self,
         endpoint: str,
         params: Optional[Dict[str, str]] = None,
         headers: Optional[Dict[str, str]] = None,
-    ) -> Union[Dict[str, Any], str]:
+    ) -> APIResponse:
         return self.request("GET", endpoint, params=params, headers=headers)
 
     def post(
@@ -75,7 +110,7 @@ class APIRequest:
         data: Optional[str] = None,
         json_data: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-    ) -> Union[Dict[str, Any], str]:
+    ) -> APIResponse:
         return self.request(
             "POST", endpoint, data=data, json_data=json_data, headers=headers
         )
@@ -86,36 +121,45 @@ class APIRequest:
         data: Optional[str] = None,
         json_data: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, str]] = None,
-    ) -> Union[Dict[str, Any], str]:
+    ) -> APIResponse:
         return self.request(
             "PUT", endpoint, data=data, json_data=json_data, headers=headers
         )
 
     def delete(
         self, endpoint: str, headers: Optional[Dict[str, str]] = None
-    ) -> Union[Dict[str, Any], str]:
+    ) -> APIResponse:
         return self.request("DELETE", endpoint, headers=headers)
 
-    def _handle_response(
-        self, response: http.client.HTTPResponse
-    ) -> Union[Dict[str, Any], str]:
+    def _handle_response(self, response: http.client.HTTPResponse) -> APIResponse:
         try:
             content = response.read().decode()
         except Exception as err:
-            return {"error": f"Error reading response: {err}"}
+            return APIResponse(
+                status_code=response.status,
+                error=f"Error reading response: {err}",
+                body=None,
+            )
 
         if response.status >= 400:
-            return {
-                "error": response.reason,
-                "status_code": response.status,
-                "body": content,
-            }
+            return APIResponse(
+                status_code=response.status,
+                error=response.reason,
+                body=content,
+            )
 
         try:
-            return json.loads(content)
+            data = json.loads(content)
+            return APIResponse(
+                status_code=response.status,
+                body=data,
+            )
         except json.JSONDecodeError:
-            # Return raw result if JSON decoding fails.
-            return content
+            # Return raw response if JSON decoding fails.
+            return APIResponse(
+                status_code=response.status,
+                body=content,
+            )
 
     def close(self) -> None:
         try:
