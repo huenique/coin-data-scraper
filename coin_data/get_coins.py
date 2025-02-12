@@ -1,8 +1,7 @@
 from typing import List
 
-from sqlalchemy.orm import Session
-
 from schema import Coin, SessionLocal
+from sqlalchemy.orm import Session
 
 
 def get_all_coins(session: Session) -> None:

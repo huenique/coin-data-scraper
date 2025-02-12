@@ -2,9 +2,8 @@ import datetime
 import json
 from typing import Any, Dict
 
-from sqlalchemy.orm import Session
-
 from schema import Coin, MarketCapHistory, SessionLocal
+from sqlalchemy.orm import Session
 
 
 def insert_coin(session: Session, coin_data: Dict[str, Any]) -> None:

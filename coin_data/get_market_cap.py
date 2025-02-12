@@ -1,9 +1,8 @@
 import sys
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
-
 from schema import Coin, MarketCapHistory, SessionLocal
+from sqlalchemy.orm import Session
 
 
 def get_market_cap(session: Session, contract_address: str) -> None:

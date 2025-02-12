@@ -1,10 +1,9 @@
 from typing import List
 
 import pandas as pd
+from schema import Coin, SessionLocal
 from sqlalchemy import Column
 from sqlalchemy.orm import Session
-
-from schema import Coin, SessionLocal
 
 
 def export_to_csv(session: Session, filename: str = "coins_data.csv") -> None:
