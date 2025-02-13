@@ -3,8 +3,7 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from types import TracebackType
-from typing import Any, Dict, Optional, Type, Union
-from urllib.parse import urlencode
+from typing import Any, Optional, Type
 
 ENDPOINT_PREFIX = "/"
 HEADER_CONTENT_TYPE = "Content-Type"
@@ -12,15 +11,23 @@ JSON_CONTENT_TYPE = "application/json"
 HTTP_ERROR_FORMAT = "HTTP {status_code} Error"
 
 
-def build_url(endpoint: str, params: Optional[Dict[str, str]] = None) -> str:
+def build_url(endpoint: str, params: dict[str, str] | None = None) -> str:
     """Constructs a URL with the given endpoint and query parameters."""
-    url = f"{ENDPOINT_PREFIX}{endpoint}"
+    url = f"/{endpoint}"
     if params:
-        url += f"?{urlencode(params)}"
+        # Handle lists properly for repeated keys
+        query_parts: list[str] = []
+        for key, value in params.items():
+            if isinstance(value, list):
+                for v in value:
+                    query_parts.append(f"{key}={v}")
+            else:
+                query_parts.append(f"{key}={value}")
+        url += "?" + "&".join(query_parts)
     return url
 
 
-def build_headers(headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+def build_headers(headers: Optional[dict[str, str]] = None) -> dict[str, str]:
     """Creates a copy of header dict or returns an empty one."""
     return headers.copy() if headers else {}
 
@@ -67,7 +74,7 @@ class APIRequest:
             http.client.HTTPSConnection if use_ssl else http.client.HTTPConnection
         )
         self.base_url: str = base_url
-        self.conn: Union[http.client.HTTPSConnection, http.client.HTTPConnection] = (
+        self.conn: http.client.HTTPSConnection | http.client.HTTPConnection = (
             conn_class(base_url, timeout=timeout)
         )
 
@@ -86,10 +93,10 @@ class APIRequest:
         self,
         method: str,
         endpoint: str,
-        params: Optional[Dict[str, str]] = None,
+        params: Optional[dict[str, str]] = None,
         data: Optional[str] = None,
-        json_data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        json_data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None,
     ) -> APIResponse:
         url = build_url(endpoint, params=params)
         req_headers = build_headers(headers)
@@ -116,8 +123,8 @@ class APIRequest:
     def get(
         self,
         endpoint: str,
-        params: Optional[Dict[str, str]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        params: Optional[dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
     ) -> APIResponse:
         return self.request("GET", endpoint, params=params, headers=headers)
 
@@ -125,8 +132,8 @@ class APIRequest:
         self,
         endpoint: str,
         data: Optional[str] = None,
-        json_data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        json_data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None,
     ) -> APIResponse:
         return self.request(
             "POST", endpoint, data=data, json_data=json_data, headers=headers
@@ -136,15 +143,15 @@ class APIRequest:
         self,
         endpoint: str,
         data: Optional[str] = None,
-        json_data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        json_data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None,
     ) -> APIResponse:
         return self.request(
             "PUT", endpoint, data=data, json_data=json_data, headers=headers
         )
 
     def delete(
-        self, endpoint: str, headers: Optional[Dict[str, str]] = None
+        self, endpoint: str, headers: Optional[dict[str, str]] = None
     ) -> APIResponse:
         return self.request("DELETE", endpoint, headers=headers)
 
