@@ -1,4 +1,8 @@
+import concurrent.futures
+import csv
+import json
 import time
+from typing import Any
 
 from coin_data import logger
 from coin_data.exchanges.pumpfun.market_cap import (
@@ -8,29 +12,39 @@ from coin_data.exchanges.pumpfun.market_cap import (
 from coin_data.exchanges.pumpfun.ohlc import get_ohlc
 from coin_data.exchanges.pumpfun.parser import find_coin_info
 from coin_data.exchanges.pumpfun.request import fetch_coin_data
-from coin_data.exchanges.pumpfun.token_explorer import PumpfunTokenDataExplorer
+from coin_data.exchanges.pumpfun.token_explorer import (
+    PumpfunTokenDataExplorer,
+    Transaction,
+)
 
+# Simple retry settings
 MAX_RETRIES = 3
 RETRY_DELAY = 1  # seconds
 
-if __name__ == "__main__":
-    explorer = PumpfunTokenDataExplorer()
-    csv_data = explorer.retrieve_token_activity()
-    json_data = explorer.convert_csv_to_dict(csv_data)
+Result = list[dict[str, Any]]
 
-    for token in json_data:
+
+def process_token(token: Transaction) -> dict[str, str] | None:
+    """
+    Process a single token to fetch data and compute market cap.
+    Returns a dict with the results or None if processing fails.
+    """
+    try:
         coin_data = fetch_coin_data(token.token_address)
         coin_info = find_coin_info(coin_data)
-
         logger.info(f"Coin info for {coin_info.name}: {coin_info}")
 
-        # Retry loop for get_token_data and its related fields
+        # Retry loop for get_token_data and required fields
         token_response_data = None
+        token_data = None
         for attempt in range(1, MAX_RETRIES + 1):
+            logger.debug(
+                f"Token {token.token_address}: Attempt {attempt} for get_token_data"
+            )
+
             token_response_data = get_token_data(coin_info.raydium_pool)
             token_data = token_response_data.data
 
-            # Check token_data, relationships, and included data
             if token_data is None:
                 logger.error(
                     f"Attempt {attempt}: Failed to retrieve token data for token: {token.token_address}"
@@ -44,7 +58,7 @@ if __name__ == "__main__":
                     f"Attempt {attempt}: Failed to retrieve included data for token: {token.token_address}"
                 )
             else:
-                break  # All required data is available
+                break  # All required data available
 
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_DELAY)
@@ -52,9 +66,8 @@ if __name__ == "__main__":
             logger.error(
                 f"Exceeded maximum retries for token: {token.token_address}. Skipping..."
             )
-            continue
+            return None
 
-        # Extract relationship data and token pair id
         relationship_data = token_data.relationships
         try:
             token_pair_id = relationship_data.pairs["data"][0]["id"]
@@ -62,12 +75,12 @@ if __name__ == "__main__":
             logger.error(
                 f"Failed to retrieve token pair ID for token: {token.token_address}. Error: {e}"
             )
-            continue
+            return None
 
-        # Get OHLC data using token data id and token pair id
+        # Get OHLC data
         ohlc_data = get_ohlc(token_data.id, token_pair_id)
 
-        # Attempt to find circulating supply in the included data
+        # Find circulating supply from the included data
         circulating_supply = None
         for included_data in token_response_data.included:
             if included_data.id == token_data.attributes.base_token_id:
@@ -78,8 +91,66 @@ if __name__ == "__main__":
             logger.error(
                 f"Failed to retrieve circulating supply for token: {token.token_address}"
             )
-            continue
+            return None
 
         # Calculate market cap data
         mcap = get_market_cap_with_times(ohlc_data, circulating_supply)
         logger.info(f"Market cap data for {coin_info.name}: {mcap}")
+
+        # Return the results as a dictionary.
+        return {
+            "token_address": token.token_address,
+            "coin_name": coin_info.name,
+            "market_cap": json.dumps(mcap),
+        }
+    except Exception as e:
+        logger.exception(
+            f"Unexpected error processing token {token.token_address}: {e}"
+        )
+        return None
+
+
+def write_results_to_csv(results: Result, filename: str = "results.csv"):
+    """
+    Write list of result dictionaries to a CSV file.
+    """
+    if not results:
+        logger.error("No results to write to CSV.")
+        return
+
+    fieldnames = ["token_address", "coin_name", "market_cap"]
+    try:
+        with open(filename, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for result in results:
+                # Ensure that market_cap is written as a string if it's not already.
+                result["market_cap"] = str(result["market_cap"])
+                writer.writerow(result)
+        logger.info(f"Results written to {filename}")
+    except Exception as e:
+        logger.exception(f"Error writing results to CSV: {e}")
+
+
+if __name__ == "__main__":
+    try:
+        explorer = PumpfunTokenDataExplorer()
+        csv_data = explorer.retrieve_token_activity()
+        json_data = explorer.convert_csv_to_dict(csv_data)
+
+        results: Result = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {
+                executor.submit(process_token, token): token for token in json_data
+            }
+
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+
+        write_results_to_csv(results)
+    except KeyboardInterrupt:
+        logger.error("Process interrupted by user.")
+    except Exception as e:
+        logger.exception(f"Unexpected error in main execution: {e}")
