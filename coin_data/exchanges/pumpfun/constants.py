@@ -1,0 +1,2 @@
+PUMP_FUN_BASE_URL = "pump.fun"
+PUMP_FUN_COIN_ENDPOINT = "coin"

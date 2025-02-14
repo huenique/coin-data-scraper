@@ -55,7 +55,7 @@ class StatusRaisable(ABC):
 class APIResponse(JSONConvertible, StatusRaisable):
     status_code: int
     error: Optional[str] = None
-    body: Optional[Any] = None
+    body: Optional[str] = None
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
