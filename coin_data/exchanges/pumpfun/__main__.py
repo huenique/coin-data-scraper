@@ -7,10 +7,10 @@ from coin_data.exchanges.pumpfun.token_explorer import PumpfunTokenDataExplorer
 if __name__ == "__main__":
     explorer = PumpfunTokenDataExplorer()
     csv_data = explorer.retrieve_token_activity()
-    json_data = explorer.convert_csv_to_json(csv_data)
+    json_data = explorer.convert_csv_to_dict(csv_data)
 
-    mint_id = "61V8vBaqAGMpgDQi4JcAwo1dmBGHsyhzodcPqnEVpump"
-    coin_data = fetch_coin_data(mint_id)
-    coin_info = find_coin_info(coin_data)
-    if coin_info:
-        print(json.dumps(coin_info, indent=4))
+    for token in json_data:
+        coin_data = fetch_coin_data(token.token_address)
+        coin_info = find_coin_info(coin_data)
+        if coin_info:
+            print(json.dumps(coin_info, indent=4))

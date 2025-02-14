@@ -1,9 +1,11 @@
 import csv
 import json
 import time
+from dataclasses import dataclass
 from io import StringIO
 from typing import Any, Dict, Tuple
 
+from coin_data import logger
 from coin_data.requests import APIRequest
 
 BASE_URL = "api-v2.solscan.io"
@@ -12,6 +14,20 @@ PUMPFUN_RAYDIUM_MIGRATION = "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg"
 ACTIVITY_SPL_TRANSFER = "ACTIVITY_SPL_TRANSFER"
 RAYDIUM_AUTHORITY_V4 = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
 WSOL = "So11111111111111111111111111111111111111112"
+
+
+@dataclass
+class Transaction:
+    signature: str
+    time: str
+    action: str
+    sender: str
+    receiver: str
+    amount: str
+    flow: str
+    value: str
+    decimals: str
+    token_address: str
 
 
 class PumpfunTokenDataExplorer:
@@ -52,6 +68,64 @@ class PumpfunTokenDataExplorer:
         reader = csv.DictReader(csv_file)
         transactions = [row for row in reader]
         return json.dumps(transactions, indent=2)
+
+    def convert_csv_to_dict(self, csv_data: str) -> list[Transaction]:
+        if not csv_data.strip():
+            raise ValueError("CSV data is empty.")
+
+        transactions: list[Transaction] = []
+        # List of fields that must be present in each row.
+        required_fields = [
+            "Signature",
+            "Time",
+            "Action",
+            "From",
+            "To",
+            "Amount",
+            "Flow",
+            "Value",
+            "Decimals",
+            "TokenAddress",
+        ]
+
+        try:
+            csv_file = StringIO(csv_data)
+            reader = csv.DictReader(csv_file)
+        except Exception as e:
+            raise ValueError("Failed to parse CSV data.") from e
+
+        # Process each row from the CSV.
+        for row_num, row in enumerate(
+            reader, start=2
+        ):  # start=2 to account for the header row.
+            # Ensure all required fields exist and are not empty.
+            if not all(row.get(field, "").strip() for field in required_fields):
+                logger.warning(
+                    f"Row {row_num} skipped: missing one or more required fields."
+                )
+                continue
+
+            try:
+                # Convert field values as needed.
+                transaction = Transaction(
+                    signature=row["Signature"],
+                    time=row["Time"],
+                    action=row["Action"],
+                    sender=row["From"],
+                    receiver=row["To"],
+                    amount=row["Amount"],
+                    flow=row["Flow"],
+                    value=row["Value"],
+                    decimals=row["Decimals"],
+                    token_address=row["TokenAddress"],
+                )
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Row {row_num} skipped due to conversion error: {e}")
+                continue
+
+            transactions.append(transaction)
+
+        return transactions
 
 
 if __name__ == "__main__":
