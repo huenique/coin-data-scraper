@@ -2,7 +2,7 @@ import datetime
 import json
 from typing import Any, Dict
 
-from schema import Coin, MarketCapHistory, SessionLocal
+from coin_data.db.schema import Coin, MarketCapHistory, SessionLocal
 from sqlalchemy.orm import Session
 
 

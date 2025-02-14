@@ -1,6 +1,6 @@
 from typing import List
 
-from schema import Coin, SessionLocal
+from coin_data.db.schema import Coin, SessionLocal
 from sqlalchemy.orm import Session
 
 

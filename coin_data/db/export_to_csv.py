@@ -1,7 +1,7 @@
 from typing import List
 
 import pandas as pd
-from schema import Coin, SessionLocal
+from coin_data.db.schema import Coin, SessionLocal
 from sqlalchemy import Column
 from sqlalchemy.orm import Session
 
