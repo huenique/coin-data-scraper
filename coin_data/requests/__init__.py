@@ -60,6 +60,9 @@ class APIResponse(JSONConvertible, StatusRaisable):
     def to_json(self) -> str:
         return json.dumps(asdict(self))
 
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
             msg = self.error or HTTP_ERROR_FORMAT.format(status_code=self.status_code)
