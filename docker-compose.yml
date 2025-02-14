@@ -1,0 +1,8 @@
+services:
+  coindata:
+    image: coindata
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - ${PWD}/data:/data

@@ -170,3 +170,9 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 coin_data/exchanges/pumpfun/coin_data.py
+
+# vscode
+.vscode/
+
+# Project generated files
+data/results.csv

@@ -5,7 +5,6 @@ from typing import Any
 
 @dataclass
 class DefaultMixin:
-
     @classmethod
     def default(cls):
         fields: dict[str, Any] = {

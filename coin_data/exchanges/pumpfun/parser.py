@@ -17,6 +17,9 @@ class Token:
     website: str
     created_timestamp: str
     raydium_pool: str
+    virtual_sol_reserves: int
+    virtual_token_reserves: int
+    total_supply: int
     highest_market_cap: int
     highest_market_cap_timestamp: int
     lowest_market_cap: int
@@ -46,6 +49,9 @@ def find_coin_info(raw_data: str) -> Token:
                 website=parsed_data.get("website"),
                 created_timestamp=parsed_data.get("created_timestamp"),
                 raydium_pool=parsed_data.get("raydium_pool"),
+                virtual_sol_reserves=parsed_data.get("virtual_sol_reserves"),
+                virtual_token_reserves=parsed_data.get("virtual_token_reserves"),
+                total_supply=parsed_data.get("total_supply"),
                 highest_market_cap=0,
                 highest_market_cap_timestamp=0,
                 lowest_market_cap=0,
@@ -70,6 +76,9 @@ def find_coin_info(raw_data: str) -> Token:
         website="",
         created_timestamp="",
         raydium_pool="",
+        virtual_sol_reserves=0,
+        virtual_token_reserves=0,
+        total_supply=0,
         highest_market_cap=0,
         highest_market_cap_timestamp=0,
         lowest_market_cap=0,

@@ -3,6 +3,7 @@ import csv
 import dataclasses
 import threading
 import time
+from pathlib import Path
 
 from coin_data import logger
 from coin_data.exchanges.pumpfun.market_cap import (
@@ -108,6 +109,9 @@ def process_token(token: Transaction) -> Token | None:
             website=getattr(coin_info, "website", ""),
             created_timestamp=getattr(coin_info, "created_timestamp", ""),
             raydium_pool=coin_info.raydium_pool,
+            virtual_sol_reserves=coin_info.virtual_sol_reserves,
+            virtual_token_reserves=coin_info.virtual_token_reserves,
+            total_supply=coin_info.total_supply,
             highest_market_cap=mcap.get("highest_market_cap", 0),
             highest_market_cap_timestamp=mcap.get("highest_market_cap_timestamp", 0),
             lowest_market_cap=mcap.get("lowest_market_cap", 0),
@@ -133,7 +137,11 @@ if __name__ == "__main__":
     # Get fieldnames from the Token dataclass
     token_fieldnames = [field.name for field in dataclasses.fields(Token)]
 
-    with open("results.csv", "w", newline="", encoding="utf-8") as csvfile:
+    data_dir = Path("/data")
+    data_dir.mkdir(parents=True, exist_ok=True)
+    file_path = data_dir / "results.csv"
+
+    with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=token_fieldnames)
         writer.writeheader()
         csvfile.flush()
@@ -148,7 +156,7 @@ if __name__ == "__main__":
                     writer.writerow(dataclasses.asdict(result))
                     csvfile.flush()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             futures: list[concurrent.futures.Future[Token | None]] = []
             for token in json_data:
                 future = executor.submit(process_token, token)

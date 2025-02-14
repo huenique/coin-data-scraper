@@ -101,6 +101,7 @@ class PoolAttributes(DefaultMixin):
     is_nsfw: bool
     is_stale_pool: bool | None
     is_pool_address_explorable: bool
+    suggested_pools_by_liquidity: Any | None = None
 
 
 @dataclass
