@@ -1,8 +1,8 @@
 import concurrent.futures
 import csv
 import json
+import threading
 import time
-from typing import Any
 
 from coin_data import logger
 from coin_data.exchanges.pumpfun.market_cap import (
@@ -20,8 +20,6 @@ from coin_data.exchanges.pumpfun.token_explorer import (
 # Simple retry settings
 MAX_RETRIES = 3
 RETRY_DELAY = 1  # seconds
-
-Result = list[dict[str, Any]]
 
 
 def process_token(token: Transaction) -> dict[str, str] | None:
@@ -41,7 +39,6 @@ def process_token(token: Transaction) -> dict[str, str] | None:
             logger.debug(
                 f"Token {token.token_address}: Attempt {attempt} for get_token_data"
             )
-
             token_response_data = get_token_data(coin_info.raydium_pool)
             token_data = token_response_data.data
 
@@ -110,47 +107,36 @@ def process_token(token: Transaction) -> dict[str, str] | None:
         return None
 
 
-def write_results_to_csv(results: Result, filename: str = "results.csv"):
-    """
-    Write list of result dictionaries to a CSV file.
-    """
-    if not results:
-        logger.error("No results to write to CSV.")
-        return
-
-    fieldnames = ["token_address", "coin_name", "market_cap"]
-    try:
-        with open(filename, "w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for result in results:
-                # Ensure that market_cap is written as a string if it's not already.
-                result["market_cap"] = str(result["market_cap"])
-                writer.writerow(result)
-        logger.info(f"Results written to {filename}")
-    except Exception as e:
-        logger.exception(f"Error writing results to CSV: {e}")
-
-
 if __name__ == "__main__":
-    try:
-        explorer = PumpfunTokenDataExplorer()
-        csv_data = explorer.retrieve_token_activity()
-        json_data = explorer.convert_csv_to_dict(csv_data)
+    explorer = PumpfunTokenDataExplorer()
+    csv_data = explorer.retrieve_token_activity()
+    json_data = explorer.convert_csv_to_dict(csv_data)
 
-        results: Result = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = {
-                executor.submit(process_token, token): token for token in json_data
-            }
+    # Create a lock to guard CSV writes
+    csv_lock = threading.Lock()
 
-            for future in concurrent.futures.as_completed(futures):
-                result = future.result()
-                if result is not None:
-                    results.append(result)
+    with open("results.csv", "w", newline="", encoding="utf-8") as csvfile:
+        fieldnames = ["token_address", "coin_name", "market_cap"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        csvfile.flush()
 
-        write_results_to_csv(results)
-    except KeyboardInterrupt:
-        logger.error("Process interrupted by user.")
-    except Exception as e:
-        logger.exception(f"Unexpected error in main execution: {e}")
+        # Define a callback to write each result as soon as it is ready.
+        def write_result_callback(
+            future: concurrent.futures.Future[dict[str, str] | None]
+        ) -> None:
+            result = future.result()
+            if result is not None:
+                with csv_lock:
+                    writer.writerow(result)
+                    csvfile.flush()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            futures: list[concurrent.futures.Future[dict[str, str] | None]] = []
+            for token in json_data:
+                future = executor.submit(process_token, token)
+                future.add_done_callback(write_result_callback)
+                futures.append(future)
+
+            # Wait for all futures to complete
+            concurrent.futures.wait(futures)
