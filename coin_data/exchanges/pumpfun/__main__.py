@@ -141,9 +141,12 @@ if __name__ == "__main__":
     # Get fieldnames from the Token dataclass
     token_fieldnames = [field.name for field in dataclasses.fields(Token)]
 
-    data_dir = Path("/data")
-    data_dir.mkdir(parents=True, exist_ok=True)
-    file_path = data_dir / "results.csv"
+    output_file = (
+        f"results_{time.strftime('%Y-%m-%d', time.gmtime(time.time() - 86400))}.csv"
+    )
+    file_path = Path.home() / output_file
+
+    logger.info(f"Writing results to {file_path}")
 
     with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=token_fieldnames)
