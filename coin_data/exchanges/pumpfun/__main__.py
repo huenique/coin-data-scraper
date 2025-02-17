@@ -1,6 +1,7 @@
 import concurrent.futures
 import csv
 import dataclasses
+import json
 import threading
 import time
 from pathlib import Path
@@ -19,9 +20,9 @@ from coin_data.exchanges.pumpfun.token_explorer import (
     Transaction,
 )
 
-# Simple retry settings
+# Exponential backoff settings
 MAX_RETRIES = 3
-RETRY_DELAY = 1  # seconds
+INITIAL_RETRY_DELAY = 1  # in seconds
 
 
 def process_token(token: Transaction) -> Token | None:
@@ -30,14 +31,17 @@ def process_token(token: Transaction) -> Token | None:
     Returns a Token dataclass instance or None if processing fails.
     """
     try:
+        # Fetch initial data without an arbitrary sleep.
         coin_data = fetch_coin_data(token.token_address)
         coin_holders = fetch_coin_holders(token.token_address)
         coin_info = find_coin_info(coin_data)
         logger.info(f"Coin info for {coin_info.name}: {coin_info}")
 
-        # Retry loop for get_token_data and required fields
+        # Use exponential backoff for get_token_data retries.
         token_response_data = None
         token_data = None
+        delay = INITIAL_RETRY_DELAY
+
         for attempt in range(1, MAX_RETRIES + 1):
             logger.debug(
                 f"Token {token.token_address}: Attempt {attempt} for get_token_data"
@@ -61,7 +65,11 @@ def process_token(token: Transaction) -> Token | None:
                 break  # All required data available
 
             if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAY)
+                logger.info(f"Waiting {delay} seconds before retrying...")
+                time.sleep(delay)
+
+                # double the delay for exponential backoff
+                delay *= 2
         else:
             logger.error(
                 f"Exceeded maximum retries for token: {token.token_address}. Skipping..."
@@ -94,9 +102,6 @@ def process_token(token: Transaction) -> Token | None:
             return None
 
         # Calculate market cap data.
-        # Here we assume that get_market_cap_with_times returns a dict with the following keys:
-        # "highest_market_cap", "highest_market_cap_timestamp", "lowest_market_cap",
-        # "lowest_market_cap_timestamp", "current_market_cap", "current_market_cap_timestamp"
         mcap = get_market_cap_with_times(ohlc_data, circulating_supply)
         logger.info(f"Market cap data for {coin_info.name}: {mcap}")
 
@@ -120,8 +125,7 @@ def process_token(token: Transaction) -> Token | None:
             lowest_market_cap_timestamp=mcap.get("lowest_market_cap_timestamp", 0),
             current_market_cap=mcap.get("current_market_cap", 0),
             current_market_cap_timestamp=mcap.get("current_market_cap_timestamp", 0),
-            holder_count=coin_holders,
-            volume=0,
+            holder_count=json.dumps(coin_holders),
         )
     except Exception as e:
         logger.exception(
@@ -172,3 +176,5 @@ if __name__ == "__main__":
 
             # Wait for all futures to complete
             concurrent.futures.wait(futures)
+
+    logger.info(f"Results written to {file_path}")
