@@ -1,31 +1,9 @@
 import json
 import re
-from dataclasses import dataclass
 
 from coin_data import logger
+from coin_data.exchanges.pumpfun.schema import Holder, Token
 from coin_data.utils.encoder import compress_data
-
-
-@dataclass
-class Token:
-    name: str
-    mint: str
-    image_uri: str
-    symbol: str
-    telegram: str
-    twitter: str
-    website: str
-    created_timestamp: str
-    raydium_pool: str
-    virtual_sol_reserves: int
-    virtual_token_reserves: int
-    total_supply: int
-    highest_market_cap: int
-    highest_market_cap_timestamp: int
-    lowest_market_cap: int
-    lowest_market_cap_timestamp: int
-    current_market_cap: int
-    current_market_cap_timestamp: int
 
 
 def find_coin_info(raw_data: str) -> Token:
@@ -58,6 +36,8 @@ def find_coin_info(raw_data: str) -> Token:
                 lowest_market_cap_timestamp=0,
                 current_market_cap=0,
                 current_market_cap_timestamp=0,
+                holder_count=Holder(),
+                volume=0,
             )
         except json.JSONDecodeError:
             logger.error(
@@ -85,4 +65,6 @@ def find_coin_info(raw_data: str) -> Token:
         lowest_market_cap_timestamp=0,
         current_market_cap=0,
         current_market_cap_timestamp=0,
+        holder_count=Holder(),
+        volume=0,
     )

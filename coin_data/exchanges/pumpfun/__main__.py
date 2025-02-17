@@ -6,13 +6,14 @@ import time
 from pathlib import Path
 
 from coin_data import logger
+from coin_data.exchanges.pumpfun.general import fetch_coin_data
+from coin_data.exchanges.pumpfun.holders import fetch_coin_holders
 from coin_data.exchanges.pumpfun.market_cap import (
     get_market_cap_with_times,
     get_token_data,
 )
 from coin_data.exchanges.pumpfun.ohlc import get_ohlc
 from coin_data.exchanges.pumpfun.parser import Token, find_coin_info
-from coin_data.exchanges.pumpfun.request import fetch_coin_data
 from coin_data.exchanges.pumpfun.token_explorer import (
     PumpfunTokenDataExplorer,
     Transaction,
@@ -30,6 +31,7 @@ def process_token(token: Transaction) -> Token | None:
     """
     try:
         coin_data = fetch_coin_data(token.token_address)
+        coin_holders = fetch_coin_holders(token.token_address)
         coin_info = find_coin_info(coin_data)
         logger.info(f"Coin info for {coin_info.name}: {coin_info}")
 
@@ -118,6 +120,8 @@ def process_token(token: Transaction) -> Token | None:
             lowest_market_cap_timestamp=mcap.get("lowest_market_cap_timestamp", 0),
             current_market_cap=mcap.get("current_market_cap", 0),
             current_market_cap_timestamp=mcap.get("current_market_cap_timestamp", 0),
+            holder_count=coin_holders,
+            volume=0,
         )
     except Exception as e:
         logger.exception(
