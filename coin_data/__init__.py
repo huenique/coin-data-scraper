@@ -12,7 +12,7 @@ class CustomFormatter(logging.Formatter):
 
 # Create logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # Ensure handlers are not duplicated
 if not logger.handlers:
