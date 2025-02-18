@@ -165,23 +165,6 @@ def get_token_data(token_address: str) -> ResponseData:
     return ResponseData.from_dict(response.to_dict()["body"])
 
 
-def get_highest_market_cap(ohlc: CandleData, circulating_supply: float) -> float:
-    highest_candle = max(ohlc.data, key=lambda x: x.h)
-    return highest_candle.h * circulating_supply
-
-
-def get_lowest_market_cap(ohlc: CandleData, circulating_supply: float) -> float:
-    lowest_candle = min(ohlc.data, key=lambda x: x.l)
-    return lowest_candle.l * circulating_supply
-
-
-def get_current_market_cap(ohlc: CandleData, circulating_supply: float) -> float:
-    if not ohlc.data:
-        return 0.0
-    current_candle = ohlc.data[-1]
-    return current_candle.c * circulating_supply
-
-
 def get_relative_time(creation_time: str, event_time: str) -> str:
     creation_dt = datetime.fromisoformat(creation_time)
     event_dt = datetime.fromisoformat(event_time)
@@ -198,15 +181,15 @@ def get_market_cap_with_times(
     creation_time = ohlc.data[0].dt
 
     highest_candle = max(ohlc.data, key=lambda x: x.h)
-    highest_market_cap = highest_candle.h * circulating_supply
+    highest_market_cap = round(highest_candle.h * circulating_supply, 2)
     highest_time = get_relative_time(creation_time, highest_candle.dt)
 
     lowest_candle = min(ohlc.data, key=lambda x: x.l)
-    lowest_market_cap = lowest_candle.l * circulating_supply
+    lowest_market_cap = round(lowest_candle.l * circulating_supply, 2)
     lowest_time = get_relative_time(creation_time, lowest_candle.dt)
 
     current_candle = ohlc.data[-1]
-    current_market_cap = current_candle.c * circulating_supply
+    current_market_cap = round(current_candle.c * circulating_supply, 2)
     current_time = get_relative_time(creation_time, current_candle.dt)
 
     return {
