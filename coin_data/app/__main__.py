@@ -36,6 +36,18 @@ def search_filter(df: pl.DataFrame, query: str) -> pl.DataFrame:
     return df.filter(mask)
 
 
+def market_cap_filter(df: pl.DataFrame, operator: str, value: float) -> pl.DataFrame:
+    if operator not in [">", "<"] or "current_market_cap" not in df.columns:
+        return df  # Return unfiltered if no valid operator or column missing
+
+    if operator == ">":
+        return df.filter(df["current_market_cap"] > value)
+    elif operator == "<":
+        return df.filter(df["current_market_cap"] < value)
+
+    return df
+
+
 # Streamlit UI
 st.title("Coin Data")
 
@@ -51,12 +63,21 @@ selected_file = st.selectbox("Select a CSV file:", csv_files)
 # Load and display data
 df = load_data(selected_file)
 
-# Search Box
+# Search Box for general filtering
 search_query = st.text_input("Search:", "")
 
-# Filter the dataframe based on search
-if search_query:
-    df = search_filter(df, search_query)
+# Market Cap Filtering: User selects `>` or `<` and enters a value
+market_cap_operator = st.selectbox("Market Cap Filter:", [None, ">", "<"])
+market_cap_value = st.number_input(
+    "Market Cap Value:", min_value=0.0, value=0.0, step=1e6
+)
+
+# Load and filter data
+df_filtered = search_filter(df, search_query)  # Apply search filter
+
+if market_cap_operator is not None:
+    df_filtered = market_cap_filter(df_filtered, market_cap_operator, market_cap_value)
+
 
 # Display DataFrame
-st.dataframe(df)  # type: ignore
+st.dataframe(df_filtered)  # type: ignore
