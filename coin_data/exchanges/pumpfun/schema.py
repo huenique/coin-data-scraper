@@ -91,4 +91,5 @@ class Token:
     lowest_market_cap_timestamp: int
     current_market_cap: int
     current_market_cap_timestamp: int
-    holder_count: str
+    holder_count: int
+    holder_count_meta: str

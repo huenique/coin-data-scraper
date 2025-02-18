@@ -126,7 +126,8 @@ def process_token(token: Transaction) -> Token | None:
             lowest_market_cap_timestamp=mcap.get("lowest_market_cap_timestamp", 0),
             current_market_cap=mcap.get("current_market_cap", 0),
             current_market_cap_timestamp=mcap.get("current_market_cap_timestamp", 0),
-            holder_count=json.dumps(coin_holders),
+            holder_count=len(coin_holders),
+            holder_count_meta=json.dumps(coin_holders),
         )
     except Exception as e:
         logger.exception(

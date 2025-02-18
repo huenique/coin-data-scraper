@@ -36,7 +36,8 @@ def find_coin_info(raw_data: str) -> Token:
                 lowest_market_cap_timestamp=0,
                 current_market_cap=0,
                 current_market_cap_timestamp=0,
-                holder_count="[]",
+                holder_count=0,
+                holder_count_meta="[]",
             )
         except json.JSONDecodeError:
             logger.error(
@@ -64,5 +65,6 @@ def find_coin_info(raw_data: str) -> Token:
         lowest_market_cap_timestamp=0,
         current_market_cap=0,
         current_market_cap_timestamp=0,
-        holder_count="[]",
+        holder_count=0,
+        holder_count_meta="[]",
     )
