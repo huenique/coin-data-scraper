@@ -4,33 +4,36 @@ import os
 import polars as pl
 import streamlit as st
 
-# Path to CSV files
-data_dir = "/home/huenique/"
-file_pattern = "results_*.csv"
+from coin_data.common import PUMPFUN_DATA_DIR, PUMPFUN_RESULTS_PATTERN
+
+data_dir = PUMPFUN_DATA_DIR
+file_pattern = PUMPFUN_RESULTS_PATTERN
 
 
-# Get list of available CSV files
 def get_csv_files():
-    return sorted(glob.glob(os.path.join(data_dir, file_pattern)))
+    return sorted(glob.glob(os.path.expanduser(os.path.join(data_dir, file_pattern))))
 
 
-# Load CSV data
 @st.cache_data
 def load_data(file_path: str) -> pl.DataFrame:
     return pl.read_csv(file_path)
 
 
 def search_filter(df: pl.DataFrame, query: str) -> pl.DataFrame:
-    # Convert all columns to UTF8 (string) for safe searching
-    df_str = df.select(pl.all().cast(pl.Utf8))
+    # If query is empty, return the full DataFrame
+    if not query.strip():
+        return df
+
+    # Convert all columns to UTF8 (string) for safe searching, replacing nulls with empty strings
+    df_str = df.with_columns(pl.all().cast(pl.Utf8).fill_null(""))
 
     # Create a single concatenated column with all text data
     combined = df_str.with_columns(
         pl.concat_str(pl.all(), separator=" ").alias("combined")
     )
 
-    # Filter based on the search query
-    mask = combined["combined"].str.contains(query, literal=True)
+    # Filter based on the search query (case-insensitive)
+    mask = combined["combined"].str.contains(query, literal=True, strict=False)
 
     # Apply the mask to the original DataFrame (not `combined`)
     return df.filter(mask)
@@ -49,12 +52,13 @@ def market_cap_filter(df: pl.DataFrame, operator: str, value: float) -> pl.DataF
 
 
 # Streamlit UI
+st.set_page_config(layout="wide")
 st.title("Coin Data")
 
 # Get available files
 csv_files = get_csv_files()
 if not csv_files:
-    st.error("No CSV files found in /data/")
+    st.error(f"No CSV files found in {PUMPFUN_DATA_DIR}")
     st.stop()
 
 # Dropdown to select file
@@ -62,6 +66,9 @@ selected_file = st.selectbox("Select a CSV file:", csv_files)
 
 # Load and display data
 df = load_data(selected_file)
+
+# write df number of rows
+st.write(f"Number of rows: {df.height}")  # type: ignore
 
 # Search Box for general filtering
 search_query = st.text_input("Search:", "")

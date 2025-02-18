@@ -2,7 +2,7 @@ import csv
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from io import StringIO
 from typing import Tuple
 
@@ -37,7 +37,7 @@ class PumpfunTokenDataExplorer:
         self.endpoint = endpoint
 
     @staticmethod
-    def get_previous_day_timestamps(date_str: str) -> Tuple[int, int]:
+    def get_day_timestamps(date_str: str) -> Tuple[int, int]:
         try:
             target_date = datetime.strptime(date_str, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
@@ -45,15 +45,12 @@ class PumpfunTokenDataExplorer:
         except ValueError:
             raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
 
-        # Move to the previous day
-        yesterday_date = target_date - timedelta(days=1)
-
-        # Start of the previous day (midnight)
-        yesterday_start = int(
+        # Start of the given day (00:00:00)
+        day_start = int(
             datetime(
-                yesterday_date.year,
-                yesterday_date.month,
-                yesterday_date.day,
+                target_date.year,
+                target_date.month,
+                target_date.day,
                 0,
                 0,
                 0,
@@ -61,12 +58,12 @@ class PumpfunTokenDataExplorer:
             ).timestamp()
         )
 
-        # End of the previous day (23:59:59)
-        yesterday_end = int(
+        # End of the given day (23:59:59)
+        day_end = int(
             datetime(
-                yesterday_date.year,
-                yesterday_date.month,
-                yesterday_date.day,
+                target_date.year,
+                target_date.month,
+                target_date.day,
                 23,
                 59,
                 59,
@@ -75,7 +72,7 @@ class PumpfunTokenDataExplorer:
             ).timestamp()
         )
 
-        return yesterday_start, yesterday_end
+        return day_start, day_end
 
     @staticmethod
     def calculate_yesterday_timestamps() -> Tuple[int, int]:

@@ -5,9 +5,9 @@ import dataclasses
 import json
 import threading
 import time
-from pathlib import Path
 
 from coin_data import logger
+from coin_data.common import PUMPFUN_DATA_DIR
 from coin_data.exchanges.pumpfun.general import fetch_coin_data
 from coin_data.exchanges.pumpfun.holders import fetch_coin_holders
 from coin_data.exchanges.pumpfun.market_cap import (
@@ -152,7 +152,7 @@ def main():
     explorer = PumpfunTokenDataExplorer()
 
     if args.date:
-        yesterday_start, yesterday_end = explorer.get_previous_day_timestamps(args.date)
+        yesterday_start, yesterday_end = explorer.get_day_timestamps(args.date)
     else:
         yesterday_start, yesterday_end = explorer.calculate_yesterday_timestamps()
 
@@ -161,7 +161,7 @@ def main():
     csv_data = explorer.retrieve_token_activity(yesterday_start, yesterday_end)
 
     # Define the base directory for output
-    output_dir = Path.home() / "pumpfun_data"
+    output_dir = PUMPFUN_DATA_DIR
     output_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
 
     # Define file paths
