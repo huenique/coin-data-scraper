@@ -67,17 +67,24 @@ selected_file = st.selectbox("Select a CSV file:", csv_files)
 # Load and display data
 df = load_data(selected_file)
 
-# write df number of rows
+# Display number of rows
 st.write(f"Number of rows: {df.height}")  # type: ignore
 
 # Search Box for general filtering
 search_query = st.text_input("Search:", "")
 
-# Market Cap Filtering: User selects `>` or `<` and enters a value
-market_cap_operator = st.selectbox("Market Cap Filter:", [None, ">", "<"])
-market_cap_value = st.number_input(
-    "Market Cap Value:", min_value=0.0, value=0.0, step=1e6
-)
+# Market Cap Filtering: Combine operator and value into one row
+col1, col2 = st.columns([1, 3])  # Adjust column widths as needed
+
+with col1:
+    market_cap_operator = st.selectbox(
+        "Market Cap", [None, ">", "<"], key="market_cap_op"
+    )
+
+with col2:
+    market_cap_value = st.number_input(
+        "Value", min_value=0.0, value=0.0, step=1e6, key="market_cap_val"
+    )
 
 # Load and filter data
 df_filtered = search_filter(df, search_query)  # Apply search filter
@@ -85,6 +92,5 @@ df_filtered = search_filter(df, search_query)  # Apply search filter
 if market_cap_operator is not None:
     df_filtered = market_cap_filter(df_filtered, market_cap_operator, market_cap_value)
 
-
-# Display DataFrame
+# Display filtered DataFrame
 st.dataframe(df_filtered)  # type: ignore
