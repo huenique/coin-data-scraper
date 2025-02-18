@@ -11,6 +11,7 @@ sqlalchemy = "^2.0.38"
 websockets = "^14.2"
 streamlit = "^1.42.0"
 polars = "^1.22.0"
+streamlit-autorefresh = "^1.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
