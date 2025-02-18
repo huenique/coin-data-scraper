@@ -176,3 +176,6 @@ coin_data/exchanges/pumpfun/coin_data.py
 
 # Project generated files
 data/results.csv
+
+# Ignore nohup.out
+nohup.out

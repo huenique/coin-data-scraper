@@ -5,3 +5,12 @@ lint:
 
 export:
 	poetry export --without-hashes --without dev -f requirements.txt -o requirements.txt
+
+start-streamlit:
+	nohup streamlit run coin_data/app/__main__.py &
+
+stop-streamlit:
+	lsof -ti:8501 | xargs kill
+
+start-scraping:
+	python coin_data/exchanges/pumpfun/__main__.py
