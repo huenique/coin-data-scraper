@@ -3,6 +3,7 @@ import concurrent.futures
 import csv
 import dataclasses
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -108,16 +109,22 @@ def update_results_csv(json_data: list[Transaction], results_file: Path):
     """Process tokens and append missing ones to the results CSV."""
     csv_lock = threading.Lock()
     token_fieldnames = [field.name for field in dataclasses.fields(Token)]
+    existing_tokens: set[str] = set()
 
-    with open(results_file, "r", newline="", encoding="utf-8") as csvfile:
-        reader = csv.DictReader(csvfile)
-        existing_tokens = {row["mint"] for row in reader}
-        json_data = [
-            token for token in json_data if token.token_address not in existing_tokens
-        ]
+    if os.path.exists(results_file):
+        with open(results_file, "r", newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            existing_tokens = {row["mint"] for row in reader}
+
+    json_data = [
+        token for token in json_data if token.token_address not in existing_tokens
+    ]
 
     with open(results_file, "a", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=token_fieldnames)
+
+        if not existing_tokens:
+            writer.writeheader()
 
         def write_result_callback(future: concurrent.futures.Future[Token | None]):
             result = future.result()
