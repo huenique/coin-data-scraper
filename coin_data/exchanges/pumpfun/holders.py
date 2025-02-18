@@ -14,7 +14,7 @@ def fetch_coin_holders(token: str) -> List[Holder]:
     with APIRequest(CRYPTO_TOOLS) as api_request:
         response = api_request.get(
             endpoint=CRYPTO_TOOLS_BUBBLE_GRAPH,
-            params={"token": token, "chain": "sol", "pumpfun": "true"},
+            params=[("token", token), ("chain", "sol"), ("pumpfun", "true")],
         )
 
         response.raise_for_status()

@@ -11,19 +11,14 @@ JSON_CONTENT_TYPE = "application/json"
 HTTP_ERROR_FORMAT = "HTTP {status_code} Error"
 
 
-def build_url(endpoint: str, params: dict[str, str] | None = None) -> str:
+def build_url(endpoint: str, params: list[tuple[str, str]] | None = None) -> str:
     """Constructs a URL with the given endpoint and query parameters."""
     url = f"/{endpoint}"
+
     if params:
-        # Handle lists properly for repeated keys
-        query_parts: list[str] = []
-        for key, value in params.items():
-            if isinstance(value, list):
-                for v in value:
-                    query_parts.append(f"{key}={v}")
-            else:
-                query_parts.append(f"{key}={value}")
+        query_parts: list[str] = [f"{key}={value}" for key, value in params]
         url += "?" + "&".join(query_parts)
+
     return url
 
 
@@ -96,12 +91,12 @@ class APIRequest:
         self,
         method: str,
         endpoint: str,
-        params: Optional[dict[str, str]] = None,
+        params: Optional[list[tuple[str, str]]] = None,
         data: Optional[str] = None,
         json_data: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, str]] = None,
     ) -> APIResponse:
-        url = build_url(endpoint, params=params)
+        url = build_url(endpoint, params)
         req_headers = build_headers(headers)
         body = None
 
@@ -126,7 +121,7 @@ class APIRequest:
     def get(
         self,
         endpoint: str,
-        params: Optional[dict[str, str]] = None,
+        params: Optional[list[tuple[str, str]]] = None,
         headers: Optional[dict[str, str]] = None,
     ) -> APIResponse:
         return self.request("GET", endpoint, params=params, headers=headers)

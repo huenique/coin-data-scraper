@@ -43,15 +43,15 @@ def get_ohlc(pool_id: str, pair_id: str) -> CandleData:
     current_timestamp = str(int(time.time()))
     current_date = datetime.datetime.now(datetime.timezone.utc)
     count_back = str(int((current_date - PUMPFUN_LAUNCH_DATE).total_seconds() // 3600))
-    params = {
-        "resolution": "60",
-        "from_timestamp": PUMPFUN_LAUNCH_DATE_TIMESTAMP,
-        "to_timestamp": current_timestamp,
-        "for_update": "false",
-        "count_back": count_back,
-        "currency": "usd",
-        "is_inverted": "false",
-    }
+    params = [
+        ("resolution", "60"),
+        ("from_timestamp", PUMPFUN_LAUNCH_DATE_TIMESTAMP),
+        ("to_timestamp", current_timestamp),
+        ("for_update", "false"),
+        ("count_back", count_back),
+        ("currency", "usd"),
+        ("is_inverted", "false"),
+    ]
 
     response = APIRequest(GECKO_TERMINAL_BASE_URL).get(endpoint, params)
 

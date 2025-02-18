@@ -2,9 +2,9 @@ import csv
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from io import StringIO
-from typing import Any, Tuple
+from typing import Tuple
 
 from coin_data import logger
 from coin_data.requests import APIRequest
@@ -39,20 +39,39 @@ class PumpfunTokenDataExplorer:
     @staticmethod
     def get_previous_day_timestamps(date_str: str) -> Tuple[int, int]:
         try:
-            target_date = datetime.strptime(date_str, "%Y-%m-%d")
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
         except ValueError:
             raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
 
+        # Move to the previous day
         yesterday_date = target_date - timedelta(days=1)
+
+        # Start of the previous day (midnight)
         yesterday_start = int(
-            yesterday_date.replace(
-                hour=0, minute=0, second=0, microsecond=0
+            datetime(
+                yesterday_date.year,
+                yesterday_date.month,
+                yesterday_date.day,
+                0,
+                0,
+                0,
+                tzinfo=timezone.utc,
             ).timestamp()
         )
 
+        # End of the previous day (23:59:59)
         yesterday_end = int(
-            yesterday_date.replace(
-                hour=23, minute=59, second=59, microsecond=999999
+            datetime(
+                yesterday_date.year,
+                yesterday_date.month,
+                yesterday_date.day,
+                23,
+                59,
+                59,
+                999999,
+                tzinfo=timezone.utc,
             ).timestamp()
         )
 
@@ -66,15 +85,15 @@ class PumpfunTokenDataExplorer:
         return yesterday_start, yesterday_end
 
     def retrieve_token_activity(self, yesterday_start: int, yesterday_end: int) -> str:
-        params: dict[str, Any] = {
-            "address": PUMPFUN_RAYDIUM_MIGRATION,
-            "activity_type[]": ACTIVITY_SPL_TRANSFER,
-            "to": RAYDIUM_AUTHORITY_V4,
-            "exclude_token": WSOL,
-            "block_time[]": str(yesterday_start),
-            "block_time[]": str(yesterday_end),
-            "remove_spam": "true",
-        }
+        params = [
+            ("address", PUMPFUN_RAYDIUM_MIGRATION),
+            ("activity_type[]", ACTIVITY_SPL_TRANSFER),
+            ("to", RAYDIUM_AUTHORITY_V4),
+            ("exclude_token", WSOL),
+            ("block_time[]", str(yesterday_start)),
+            ("block_time[]", str(yesterday_end)),
+            ("remove_spam", "true"),
+        ]
 
         with APIRequest(self.base_url) as client:
             response = client.get(self.endpoint, params=params)

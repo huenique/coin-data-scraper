@@ -155,7 +155,7 @@ def get_token_data(token_address: str) -> ResponseData:
     https://app.geckoterminal.com/api/p1/solana/pools/{token_address | raydium_pool}?include=tokens.tags&base_token=0
     """
     endpoint = f"{GECKO_TERMINAL_POOLS_ENDPOINT}/{token_address}"
-    params = {"include": "tokens.tags", "base_token": "0"}
+    params = [("include", "tokens.tags"), ("base_token", "0")]
     response = APIRequest(GECKO_TERMINAL_BASE_URL).get(endpoint, params)
 
     if response.error:

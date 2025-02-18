@@ -156,18 +156,36 @@ def main():
     else:
         yesterday_start, yesterday_end = explorer.calculate_yesterday_timestamps()
 
+    logger.info(f"Retrieving token activity from {yesterday_start} to {yesterday_end}")
+
     csv_data = explorer.retrieve_token_activity(yesterday_start, yesterday_end)
+
+    # Define the base directory for output
+    output_dir = Path.home() / "pumpfun_data"
+    output_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+
+    # Define file paths
+    date_suffix = (
+        args.date
+        if args.date
+        else time.strftime("%Y-%m-%d", time.gmtime(time.time() - 86400))
+    )
+
+    activities_file = output_dir / f"activities_{date_suffix}.csv"
+    results_file = output_dir / f"results_{date_suffix}.csv"
+
+    # Write activities file
+    with open(activities_file, "w") as f:
+        f.write(csv_data)
+
     json_data = explorer.convert_csv_to_dict(csv_data)
 
     csv_lock = threading.Lock()
     token_fieldnames = [field.name for field in dataclasses.fields(Token)]
 
-    output_file = f"results_{args.date if args.date else time.strftime('%Y-%m-%d', time.gmtime(time.time() - 86400))}.csv"
-    file_path = Path.home() / output_file
+    logger.info(f"Writing results to {results_file}")
 
-    logger.info(f"Writing results to {file_path}")
-
-    with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
+    with open(results_file, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=token_fieldnames)
         writer.writeheader()
         csvfile.flush()
@@ -188,7 +206,7 @@ def main():
 
             concurrent.futures.wait(futures)
 
-    logger.info(f"Results written to {file_path}")
+    logger.info(f"Results written to {results_file}")
 
 
 if __name__ == "__main__":
