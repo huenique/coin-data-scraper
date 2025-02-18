@@ -5,6 +5,7 @@ import dataclasses
 import json
 import threading
 import time
+from pathlib import Path
 
 from coin_data import logger
 from coin_data.common import PUMPFUN_DATA_DIR
@@ -32,108 +33,106 @@ def process_token(token: Transaction) -> Token | None:
     Returns a Token dataclass instance or None if processing fails.
     """
     try:
-        # Fetch initial data without an arbitrary sleep.
         coin_data = fetch_coin_data(token.token_address)
         coin_holders = fetch_coin_holders(token.token_address)
         coin_info = find_coin_info(coin_data)
         logger.info(f"Coin info for {coin_info.name}: {coin_info}")
 
-        # Use exponential backoff for get_token_data retries.
-        token_response_data = None
-        token_data = None
-        delay = INITIAL_RETRY_DELAY
-
-        for attempt in range(1, MAX_RETRIES + 1):
-            logger.debug(
-                f"Token {token.token_address}: Attempt {attempt} for get_token_data"
-            )
-            token_response_data = get_token_data(coin_info.raydium_pool)
-            token_data = token_response_data.data
-
-            if token_data is None:
-                logger.error(
-                    f"Attempt {attempt}: Failed to retrieve token data for token: {token.token_address}"
-                )
-            elif token_data.relationships is None:
-                logger.error(
-                    f"Attempt {attempt}: Failed to retrieve relationship data for token: {token.token_address}"
-                )
-            elif token_response_data.included is None:
-                logger.error(
-                    f"Attempt {attempt}: Failed to retrieve included data for token: {token.token_address}"
-                )
-            else:
-                break  # All required data available
-
-            if attempt < MAX_RETRIES:
-                logger.info(f"Waiting {delay} seconds before retrying...")
-                time.sleep(delay)
-
-                # double the delay for exponential backoff
-                delay *= 2
-        else:
-            logger.error(
-                f"Exceeded maximum retries for token: {token.token_address}. Skipping..."
-            )
+        token_response_data = get_token_data(coin_info.raydium_pool)
+        token_data = token_response_data.data
+        if not token_data:
+            logger.error(f"Failed to fetch token data for: {token.token_address}")
             return None
 
-        relationship_data = token_data.relationships
-        try:
-            token_pair_id = relationship_data.pairs["data"][0]["id"]
-        except (KeyError, IndexError) as e:
-            logger.error(
-                f"Failed to retrieve token pair ID for token: {token.token_address}. Error: {e}"
-            )
+        relationships = token_data.relationships
+        if not relationships:
+            logger.error(f"Missing token pair data for: {token.token_address}")
             return None
 
-        # Get OHLC data
-        ohlc_data = get_ohlc(token_data.id, token_pair_id)
+        included_data = token_response_data.included
+        if not included_data:
+            logger.error(f"Missing included data for: {token.token_address}")
+            return None
 
-        # Find circulating supply from the included data
-        circulating_supply = None
-        for included_data in token_response_data.included:
-            if included_data.id == token_data.attributes.base_token_id:
-                circulating_supply = included_data.attributes.get("circulating_supply")
-                break
+        circulating_supply = next(
+            (
+                d.attributes["circulating_supply"]
+                for d in included_data
+                if d.id == token_data.attributes.base_token_id
+            ),
+            None,
+        )
 
         if circulating_supply is None:
-            logger.error(
-                f"Failed to retrieve circulating supply for token: {token.token_address}"
-            )
+            logger.error(f"Missing circulating supply for: {token.token_address}")
             return None
 
-        # Calculate market cap data.
-        mcap = get_market_cap_with_times(ohlc_data, circulating_supply)
-        logger.info(f"Market cap data for {coin_info.name}: {mcap}")
+        token_pair_id = relationships.pairs["data"][0]["id"]
+        ohlc_data = get_ohlc(token_data.id, token_pair_id)
+        market_cap = get_market_cap_with_times(ohlc_data, circulating_supply)
 
-        # Construct and return the Token dataclass instance.
         return Token(
             name=coin_info.name,
-            mint=token.token_address,  # Assuming token_address is equivalent to mint
-            image_uri=getattr(coin_info, "image_uri", ""),
-            symbol=getattr(coin_info, "symbol", ""),
-            telegram=getattr(coin_info, "telegram", ""),
-            twitter=getattr(coin_info, "twitter", ""),
-            website=getattr(coin_info, "website", ""),
-            created_timestamp=getattr(coin_info, "created_timestamp", ""),
+            mint=token.token_address,
+            image_uri=coin_info.image_uri,
+            symbol=coin_info.symbol,
+            telegram=coin_info.telegram,
+            twitter=coin_info.twitter,
+            website=coin_info.website,
+            created_timestamp=coin_info.created_timestamp,
             raydium_pool=coin_info.raydium_pool,
             virtual_sol_reserves=coin_info.virtual_sol_reserves,
             virtual_token_reserves=coin_info.virtual_token_reserves,
             total_supply=coin_info.total_supply,
-            highest_market_cap=mcap.get("highest_market_cap", 0),
-            highest_market_cap_timestamp=mcap.get("highest_market_cap_timestamp", 0),
-            lowest_market_cap=mcap.get("lowest_market_cap", 0),
-            lowest_market_cap_timestamp=mcap.get("lowest_market_cap_timestamp", 0),
-            current_market_cap=mcap.get("current_market_cap", 0),
-            current_market_cap_timestamp=mcap.get("current_market_cap_timestamp", 0),
+            highest_market_cap=market_cap.get("highest_market_cap", 0),
+            highest_market_cap_timestamp=market_cap.get(
+                "highest_market_cap_timestamp", 0
+            ),
+            lowest_market_cap=market_cap.get("lowest_market_cap", 0),
+            lowest_market_cap_timestamp=market_cap.get(
+                "lowest_market_cap_timestamp", 0
+            ),
+            current_market_cap=market_cap.get("current_market_cap", 0),
+            current_market_cap_timestamp=market_cap.get(
+                "current_market_cap_timestamp", 0
+            ),
             holder_count=len(coin_holders),
             holder_count_meta=json.dumps(coin_holders),
         )
     except Exception as e:
-        logger.exception(
-            f"Unexpected error processing token {token.token_address}: {e}"
-        )
+        logger.exception(f"Error processing token {token.token_address}: {e}")
         return None
+
+
+def update_results_csv(json_data: list[Transaction], results_file: Path):
+    """Process tokens and append missing ones to the results CSV."""
+    csv_lock = threading.Lock()
+    token_fieldnames = [field.name for field in dataclasses.fields(Token)]
+
+    with open(results_file, "r", newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        existing_tokens = {row["mint"] for row in reader}
+        json_data = [
+            token for token in json_data if token.token_address not in existing_tokens
+        ]
+
+    with open(results_file, "a", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=token_fieldnames)
+
+        def write_result_callback(future: concurrent.futures.Future[Token | None]):
+            result = future.result()
+            if result:
+                with csv_lock:
+                    writer.writerow(dataclasses.asdict(result))
+                    csvfile.flush()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(process_token, token) for token in json_data]
+            for future in futures:
+                future.add_done_callback(write_result_callback)
+            concurrent.futures.wait(futures)
+
+    logger.info("Results CSV updated.")
 
 
 def main():
@@ -160,53 +159,19 @@ def main():
 
     csv_data = explorer.retrieve_token_activity(yesterday_start, yesterday_end)
 
-    # Define the base directory for output
     output_dir = PUMPFUN_DATA_DIR
-    output_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Define file paths
     date_suffix = (
         args.date
         if args.date
         else time.strftime("%Y-%m-%d", time.gmtime(time.time() - 86400))
     )
 
-    activities_file = output_dir / f"activities_{date_suffix}.csv"
     results_file = output_dir / f"results_{date_suffix}.csv"
 
-    # Write activities file
-    with open(activities_file, "w") as f:
-        f.write(csv_data)
-
     json_data = explorer.convert_csv_to_dict(csv_data)
-
-    csv_lock = threading.Lock()
-    token_fieldnames = [field.name for field in dataclasses.fields(Token)]
-
-    logger.info(f"Writing results to {results_file}")
-
-    with open(results_file, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=token_fieldnames)
-        writer.writeheader()
-        csvfile.flush()
-
-        def write_result_callback(
-            future: concurrent.futures.Future[Token | None],
-        ) -> None:
-            result = future.result()
-            if result is not None:
-                with csv_lock:
-                    writer.writerow(dataclasses.asdict(result))
-                    csvfile.flush()
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [executor.submit(process_token, token) for token in json_data]
-            for future in futures:
-                future.add_done_callback(write_result_callback)
-
-            concurrent.futures.wait(futures)
-
-    logger.info(f"Results written to {results_file}")
+    update_results_csv(json_data, results_file)
 
 
 if __name__ == "__main__":

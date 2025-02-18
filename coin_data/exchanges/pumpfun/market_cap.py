@@ -121,11 +121,31 @@ class PoolData(DefaultMixin):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PoolData":
+        data_item = data.get("data", {})
+        if not data_item or isinstance(data_item, list):
+            logger.warning("No 'data' field found in the input dictionary.")
+            return cls.default()
+
+        attributes_data = data_item.get("attributes", {})
+        relationships_data = data_item.get("relationships", {})
+
+        try:
+            pool_attributes = PoolAttributes(**attributes_data)
+        except TypeError as e:
+            logger.error(f"Failed to initialize PoolAttributes: {e}")
+            pool_attributes = PoolAttributes.default()
+
+        try:
+            relationships = Relationships(**relationships_data)
+        except TypeError as e:
+            logger.error(f"Failed to initialize Relationships: {e}")
+            relationships = Relationships.default()
+
         return cls(
-            id=data["data"]["id"],
-            type=data["data"]["type"],
-            attributes=PoolAttributes(**data["data"]["attributes"]),
-            relationships=Relationships(**data["data"]["relationships"]),
+            id=data_item.get("id", "default_id"),
+            type=data_item.get("type", "default_type"),
+            attributes=pool_attributes,
+            relationships=relationships,
         )
 
 

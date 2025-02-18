@@ -14,6 +14,5 @@ results_tokens = set(results_df["mint"].to_list())
 
 # Find missing tokens
 missing_tokens = activities_tokens - results_tokens
-missing_tokens_df = pl.DataFrame({"Missing Tokens": list(missing_tokens)})
 
-logger.info(f"Missing tokens: {missing_tokens_df}")
+logger.info(f"Missing tokens: {missing_tokens}")
