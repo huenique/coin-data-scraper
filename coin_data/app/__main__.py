@@ -32,7 +32,7 @@ def search_filter(df: pl.DataFrame, query: str) -> pl.DataFrame:
         pl.concat_str(pl.all(), separator=" ").alias("combined")
     )
 
-    mask = combined["combined"].str.contains(query, literal=True, strict=False)
+    mask = combined["combined"].str.contains(query, literal=False, strict=False)
 
     return df.filter(mask)
 
