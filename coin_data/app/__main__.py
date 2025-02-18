@@ -21,11 +21,19 @@ def load_data(file_path: str) -> pl.DataFrame:
 
 
 def search_filter(df: pl.DataFrame, query: str) -> pl.DataFrame:
-    return df.filter(
-        df.select(pl.all().cast(pl.Utf8))
-        .with_columns(pl.concat_str(pl.all(), separator=" ").alias("combined"))
-        .filter(pl.col("combined").str.contains(query))
+    # Convert all columns to UTF8 (string) for safe searching
+    df_str = df.select(pl.all().cast(pl.Utf8))
+
+    # Create a single concatenated column with all text data
+    combined = df_str.with_columns(
+        pl.concat_str(pl.all(), separator=" ").alias("combined")
     )
+
+    # Filter based on the search query
+    mask = combined["combined"].str.contains(query, literal=True)
+
+    # Apply the mask to the original DataFrame (not `combined`)
+    return df.filter(mask)
 
 
 # Streamlit UI
