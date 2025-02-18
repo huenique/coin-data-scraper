@@ -2,8 +2,9 @@ import csv
 import json
 import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from io import StringIO
-from typing import Any, Dict, Tuple
+from typing import Any, Tuple
 
 from coin_data import logger
 from coin_data.requests import APIRequest
@@ -35,16 +36,37 @@ class PumpfunTokenDataExplorer:
         self.base_url = base_url
         self.endpoint = endpoint
 
-    def _calculate_yesterday_timestamps(self) -> Tuple[int, int]:
+    @staticmethod
+    def get_previous_day_timestamps(date_str: str) -> Tuple[int, int]:
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
+
+        yesterday_date = target_date - timedelta(days=1)
+        yesterday_start = int(
+            yesterday_date.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            ).timestamp()
+        )
+
+        yesterday_end = int(
+            yesterday_date.replace(
+                hour=23, minute=59, second=59, microsecond=999999
+            ).timestamp()
+        )
+
+        return yesterday_start, yesterday_end
+
+    @staticmethod
+    def calculate_yesterday_timestamps() -> Tuple[int, int]:
         today_midnight = int(time.time()) // 86400 * 86400
         yesterday_start = today_midnight - 86400
         yesterday_end = today_midnight - 1
         return yesterday_start, yesterday_end
 
-    def retrieve_token_activity(self) -> str:
-        yesterday_start, yesterday_end = self._calculate_yesterday_timestamps()
-
-        params: Dict[str, Any] = {
+    def retrieve_token_activity(self, yesterday_start: int, yesterday_end: int) -> str:
+        params: dict[str, Any] = {
             "address": PUMPFUN_RAYDIUM_MIGRATION,
             "activity_type[]": ACTIVITY_SPL_TRANSFER,
             "to": RAYDIUM_AUTHORITY_V4,
@@ -130,6 +152,7 @@ class PumpfunTokenDataExplorer:
 
 if __name__ == "__main__":
     explorer = PumpfunTokenDataExplorer()
-    csv_data = explorer.retrieve_token_activity()
+    yesterday_start, yesterday_end = explorer.calculate_yesterday_timestamps()
+    csv_data = explorer.retrieve_token_activity(yesterday_start, yesterday_end)
     json_data = explorer.convert_csv_to_json(csv_data)
     print(json_data)

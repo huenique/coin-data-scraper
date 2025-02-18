@@ -13,4 +13,7 @@ stop-streamlit:
 	lsof -ti:8501 | xargs kill
 
 start-scraping:
-	python coin_data/exchanges/pumpfun/__main__.py
+	python coin_data/exchanges/pumpfun/__main__.py $(filter-out $@,$(MAKECMDGOALS))
+
+%:
+	@:

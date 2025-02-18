@@ -1,3 +1,4 @@
+import argparse
 import concurrent.futures
 import csv
 import dataclasses
@@ -134,20 +135,33 @@ def process_token(token: Transaction) -> Token | None:
         return None
 
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(
+        description="Retrieve and process Pumpfun token activity."
+    )
+
+    parser.add_argument(
+        "--date",
+        type=str,
+        help="Custom date in YYYY-MM-DD format (default: yesterday)",
+    )
+
+    args = parser.parse_args()
+
     explorer = PumpfunTokenDataExplorer()
-    csv_data = explorer.retrieve_token_activity()
+
+    if args.date:
+        yesterday_start, yesterday_end = explorer.get_previous_day_timestamps(args.date)
+    else:
+        yesterday_start, yesterday_end = explorer.calculate_yesterday_timestamps()
+
+    csv_data = explorer.retrieve_token_activity(yesterday_start, yesterday_end)
     json_data = explorer.convert_csv_to_dict(csv_data)
 
-    # Create a lock to guard CSV writes
     csv_lock = threading.Lock()
-
-    # Get fieldnames from the Token dataclass
     token_fieldnames = [field.name for field in dataclasses.fields(Token)]
 
-    output_file = (
-        f"results_{time.strftime('%Y-%m-%d', time.gmtime(time.time() - 86400))}.csv"
-    )
+    output_file = f"results_{args.date if args.date else time.strftime('%Y-%m-%d', time.gmtime(time.time() - 86400))}.csv"
     file_path = Path.home() / output_file
 
     logger.info(f"Writing results to {file_path}")
@@ -157,7 +171,6 @@ if __name__ == "__main__":
         writer.writeheader()
         csvfile.flush()
 
-        # Define a callback to write each result as soon as it is ready.
         def write_result_callback(
             future: concurrent.futures.Future[Token | None],
         ) -> None:
@@ -168,13 +181,14 @@ if __name__ == "__main__":
                     csvfile.flush()
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures: list[concurrent.futures.Future[Token | None]] = []
-            for token in json_data:
-                future = executor.submit(process_token, token)
+            futures = [executor.submit(process_token, token) for token in json_data]
+            for future in futures:
                 future.add_done_callback(write_result_callback)
-                futures.append(future)
 
-            # Wait for all futures to complete
             concurrent.futures.wait(futures)
 
     logger.info(f"Results written to {file_path}")
+
+
+if __name__ == "__main__":
+    main()
