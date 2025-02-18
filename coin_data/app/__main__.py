@@ -18,7 +18,14 @@ def get_csv_files():
 @st.cache_data
 def load_data(file_path: str) -> pl.DataFrame:
     """Loads CSV data with caching, but will be cleared on refresh."""
-    return pl.read_csv(file_path)
+    df = pl.DataFrame()
+
+    try:
+        df = pl.read_csv(file_path)
+    except pl.exceptions.NoDataError as e:
+        st.error(f"Error loading data: {e}")
+
+    return df
 
 
 def search_filter(df: pl.DataFrame, query: str) -> pl.DataFrame:
