@@ -175,7 +175,12 @@ def main():
         else time.strftime("%Y-%m-%d", time.gmtime(time.time() - 86400))
     )
 
+    activities_file = output_dir / f"activities_{date_suffix}.csv"
     results_file = output_dir / f"results_{date_suffix}.csv"
+
+    # Write activities file
+    with open(activities_file, "w") as f:
+        f.write(csv_data)
 
     json_data = explorer.convert_csv_to_dict(csv_data)
     update_results_csv(json_data, results_file)
