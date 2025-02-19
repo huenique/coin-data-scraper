@@ -80,11 +80,18 @@ class APIRequest:
         self._initialize_connection()
 
     def _initialize_connection(self) -> None:
-        """Initialize connection, selecting a proxy if enabled."""
+        """Initialize connection, selecting a proxy if enabled and available."""
         if PROXIES_ENABLED and PROXIES:
             self.proxy_index = random.randint(0, len(PROXIES) - 1)
-            self._connect_via_proxy(self.proxy_index)
+            try:
+                self._connect_via_proxy(self.proxy_index)
+            except ValueError:
+                logger.warning(
+                    "Invalid proxy format. Falling back to direct connection."
+                )
+                self._connect_direct()
         else:
+            logger.info("No proxies available. Using direct connection.")
             self._connect_direct()
 
     def _connect_direct(self) -> None:
