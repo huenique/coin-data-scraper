@@ -84,9 +84,9 @@ class APIRequest:
     def _initialize_connection(self) -> None:
         """Initialize connection, selecting a proxy if enabled and available."""
 
-        # ✅ Ensure base_url has a scheme
+        # Ensure base_url has a scheme
         if not self.base_url.startswith(("http://", "https://")):
-            self.base_url = f"https://{self.base_url}"  # Default to HTTPS
+            self.base_url = f"https://{self.base_url}"
 
         valid_proxies = [proxy.strip() for proxy in PROXIES if proxy and proxy.strip()]
 
@@ -118,9 +118,9 @@ class APIRequest:
             raise ValueError(f"Invalid base URL after fix: {self.base_url}")
 
         host = parsed_url.hostname
-        port = parsed_url.port or (443 if self.use_ssl else 80)  # Default ports
+        port = parsed_url.port or (443 if self.use_ssl else 80)
 
-        logger.info(f"Using direct connection to {host}:{port}")
+        logger.debug(f"Using d`irect connection to {host}:{port}")
 
         conn_class = (
             http.client.HTTPSConnection if self.use_ssl else http.client.HTTPConnection
@@ -143,7 +143,7 @@ class APIRequest:
             self._connect_direct()
             return
 
-        # ✅ Fix: Convert `socks5h://` to `socks5://` for compatibility
+        # Fix: Convert `socks5h://` to `socks5://` for compatibility
         if proxy.startswith("socks5h://"):
             proxy = proxy.replace("socks5h://", "socks5://", 1)
 
@@ -167,24 +167,21 @@ class APIRequest:
         if not dest_host:
             raise ValueError(f"Invalid base URL: {self.base_url}")
 
-        proxy_client = Proxy.from_url(  # type: ignore
-            proxy, rdns=True
-        )  # ✅ Ensures DNS resolution via proxy
-
+        proxy_client = Proxy.from_url(proxy, rdns=True)  # type: ignore
         raw_sock = None
 
         try:
             raw_sock = proxy_client.connect(dest_host=dest_host, dest_port=dest_port)
         except Exception as e:
-            logger.warning(
+            logger.debug(
                 f"Proxy {proxy_host}:{proxy_port} failed. Retrying another proxy. Error: {e}"
             )
 
-            # ✅ Mark this proxy as dead
-            self.dead_proxies.add(proxy)
+            # Mark this proxy as dead
+            self.dead_proxies.add(valid_proxies[index])
 
-            if not self._retry_with_other_proxies(index):  # ✅ Ensures it stops looping
-                return  # ✅ Avoid proceeding with an uninitialized connection
+            if not self._retry_with_other_proxies(index):
+                return
 
         if self.use_ssl and raw_sock:
             raw_sock = ssl.create_default_context().wrap_socket(
@@ -213,38 +210,40 @@ class APIRequest:
                 "No valid proxies available. Falling back to direct connection."
             )
             self.use_proxy = False
-            self._connect_direct()  # ✅ Ensure `self.conn` is set
+
+            # Ensure `self.conn` is set
+            self._connect_direct()
+
             return False
 
         proxy_to_retry = valid_proxies[failed_index]
 
-        # ✅ Mark as dead immediately if the proxy has already failed too many times
+        # Immediately skip dead proxies
         if proxy_to_retry in self.dead_proxies:
-            logger.error(f"Skipping dead proxy: {proxy_to_retry}")
+            logger.debug(f"Skipping dead proxy: {proxy_to_retry}")
             return self._switch_to_next_proxy(failed_index, valid_proxies)
 
         for attempt in range(MAX_PROXY_RETRIES):
             try:
                 logger.info(
-                    f"Retrying same proxy ({attempt+1}/{MAX_PROXY_RETRIES}): {proxy_to_retry}"
+                    f"Retrying same proxy ({attempt + 1}/{MAX_PROXY_RETRIES}): {proxy_to_retry}"
                 )
 
-                # ✅ If the proxy is dead, don't retry it
+                # If the proxy is already dead, don't retry it
                 if proxy_to_retry in self.dead_proxies:
-                    logger.error(f"Skipping dead proxy: {proxy_to_retry}")
+                    logger.debug(f"Skipping dead proxy: {proxy_to_retry}")
                     return self._switch_to_next_proxy(failed_index, valid_proxies)
 
-                self._connect_via_proxy(
-                    failed_index, valid_proxies
-                )  # ✅ Reinitialize failed proxy
+                # Reinitialize failed proxy
+                self._connect_via_proxy(failed_index, valid_proxies)
                 self.proxy_index = failed_index
-                return True  # ✅ Successfully reconnected using the same proxy
+                return True
             except Exception as e:
                 logger.warning(
-                    f"Proxy {proxy_to_retry} failed on retry {attempt+1}: {e}"
+                    f"Proxy {proxy_to_retry} failed on retry {attempt + 1}: {e}"
                 )
 
-        # ✅ Mark this proxy as dead and never retry it again
+        # Mark this proxy as dead and never retry it again
         logger.error(
             f"Proxy {proxy_to_retry} is unreachable after {MAX_PROXY_RETRIES} attempts. Skipping permanently."
         )
@@ -257,12 +256,14 @@ class APIRequest:
     ) -> bool:
         """Switch to the next available proxy, skipping dead proxies."""
         ordered_indices = list(range(len(valid_proxies)))
-        ordered_indices.remove(failed_index)  # ✅ Skip the already-failed proxy
+
+        # Skip the already-failed proxy
+        ordered_indices.remove(failed_index)
 
         for index in ordered_indices:
             proxy_to_try = valid_proxies[index]
 
-            # ✅ Don't retry dead proxies
+            # Don't retry dead proxies
             if proxy_to_try in self.dead_proxies:
                 logger.error(f"Skipping dead proxy: {proxy_to_try}")
                 continue
@@ -271,15 +272,17 @@ class APIRequest:
                 logger.info(f"Switching to new proxy: {proxy_to_try}")
                 self._connect_via_proxy(index, valid_proxies)
                 self.proxy_index = index
-                return True  # ✅ Successfully switched to another proxy
+                return True
             except Exception as e:
                 logger.warning(f"Proxy {proxy_to_try} failed: {e}")
-                continue  # Try the next proxy
 
-        logger.warning("All proxies failed. Using direct connection.")
+                # Try the next proxy
+                continue
+
+        logger.debug("All proxies failed. Using direct connection.")
         self.use_proxy = False
-        self._connect_direct()  # ✅ Ensure connection is set
-        return False  # No proxy worked
+        self._connect_direct()
+        return False
 
     def __enter__(self) -> "APIRequest":
         return self
