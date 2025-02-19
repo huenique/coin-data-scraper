@@ -5,7 +5,7 @@ import polars as pl
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh  # type: ignore
 
-from coin_data.common import PUMPFUN_DATA_DIR, PUMPFUN_RESULTS_PATTERN
+from coin_data.config import PUMPFUN_DATA_DIR, PUMPFUN_RESULTS_PATTERN
 
 data_dir = PUMPFUN_DATA_DIR
 file_pattern = PUMPFUN_RESULTS_PATTERN
@@ -80,7 +80,9 @@ selected_file = st.selectbox("Select a CSV file:", csv_files)
 df = load_data(selected_file)
 
 # Display number of rows
-st.write(f"Number of rows: {df.height}")  # type: ignore
+st.write(  # type: ignore
+    f"Number of graduated tokens whose metadata is available on pump.fun: {df.height}"
+)
 
 # Search Box for general filtering
 search_query = st.text_input("Search:", "")

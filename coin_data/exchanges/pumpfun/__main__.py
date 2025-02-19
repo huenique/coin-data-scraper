@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 from coin_data import logger
-from coin_data.common import PUMPFUN_DATA_DIR
+from coin_data.config import PUMPFUN_DATA_DIR
 from coin_data.exchanges.pumpfun.general import fetch_coin_data
 from coin_data.exchanges.pumpfun.holders import fetch_coin_holders
 from coin_data.exchanges.pumpfun.market_cap import (

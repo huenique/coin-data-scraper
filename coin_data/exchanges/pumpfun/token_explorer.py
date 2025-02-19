@@ -97,7 +97,7 @@ class PumpfunTokenDataExplorer:
             response.raise_for_status()
 
             if response.body is None:
-                raise ValueError(f"{response.body=}")
+                raise ValueError(f"{response.body=}, {response.error=}")
 
             return response.body
 

@@ -1,9 +1,18 @@
 import http.client
 import json
+import random
+import ssl
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from types import TracebackType
 from typing import Any, Optional, Type
+from urllib.parse import urlparse
+
+from python_socks.sync import Proxy
+
+from coin_data import logger
+from coin_data.config import PROXIES_ENABLED
+from coin_data.proxies import PROXIES
 
 ENDPOINT_PREFIX = "/"
 HEADER_CONTENT_TYPE = "Content-Type"
@@ -30,19 +39,12 @@ def build_headers(headers: Optional[dict[str, str]] = None) -> dict[str, str]:
 class JSONConvertible(ABC):
     @abstractmethod
     def to_json(self) -> str:
-        """
-        Convert the instance to a JSON string.
-        External modules can implement this interface to provide custom JSON conversion.
-        """
         pass
 
 
 class StatusRaisable(ABC):
     @abstractmethod
     def raise_for_status(self) -> None:
-        """
-        Raise an exception if the status code indicates an error.
-        """
         pass
 
 
@@ -61,6 +63,7 @@ class APIResponse(JSONConvertible, StatusRaisable):
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
             msg = self.error or HTTP_ERROR_FORMAT.format(status_code=self.status_code)
+            logger.error(self.body)
             raise Exception(msg)
 
 
@@ -68,13 +71,102 @@ class APIRequest:
     def __init__(
         self, base_url: str, use_ssl: bool = True, timeout: Optional[int] = None
     ) -> None:
-        conn_class = (
-            http.client.HTTPSConnection if use_ssl else http.client.HTTPConnection
-        )
         self.base_url: str = base_url
-        self.conn: http.client.HTTPSConnection | http.client.HTTPConnection = (
-            conn_class(base_url, timeout=timeout)
+        self.use_ssl = use_ssl
+        self.timeout = timeout
+        self.proxy_index = None
+        self.conn = None
+
+        self._initialize_connection()
+
+    def _initialize_connection(self) -> None:
+        """Initialize connection, selecting a proxy if enabled."""
+        if PROXIES_ENABLED and PROXIES:
+            self.proxy_index = random.randint(0, len(PROXIES) - 1)
+            self._connect_via_proxy(self.proxy_index)
+        else:
+            self._connect_direct()
+
+    def _connect_direct(self) -> None:
+        """Establish a direct connection (without a proxy)."""
+        conn_class = (
+            http.client.HTTPSConnection if self.use_ssl else http.client.HTTPConnection
         )
+        self.conn = conn_class(self.base_url, timeout=self.timeout)
+        self.proxy_host = None
+        self.proxy_port = None
+
+    def _connect_via_proxy(self, index: int) -> None:
+        """Establish a connection using a proxy and attach it to self.conn."""
+        proxy = PROXIES[index]
+
+        if proxy.startswith("socks5h://"):
+            proxy = proxy.replace("socks5h://", "socks5://", 1)
+
+        logger.debug(f"Using Proxy: {proxy}")
+
+        # Parse the proxy URL manually
+        parsed_proxy = urlparse(proxy)
+        proxy_host = parsed_proxy.hostname
+        proxy_port = parsed_proxy.port
+
+        if not proxy_host or not proxy_port:
+            raise ValueError(f"Invalid proxy format: {proxy}")
+
+        if not self.base_url.startswith(("http://", "https://")):
+            self.base_url = f"https://{self.base_url}"
+
+        # Create a proxy object
+        proxy_client = Proxy.from_url(proxy)  # type: ignore
+
+        # Extract destination host and port
+        parsed_base_url = urlparse(self.base_url)
+        dest_host = parsed_base_url.hostname
+        dest_port = parsed_base_url.port or (443 if self.use_ssl else 80)
+
+        if not dest_host:
+            raise ValueError(f"Invalid base URL: {self.base_url}")
+
+        # Connect to the proxy
+        try:
+            raw_sock = proxy_client.connect(dest_host=dest_host, dest_port=dest_port)
+        except Exception as e:
+            raise ConnectionError(f"Failed to connect through proxy {proxy} -> {e}")
+
+        # Wrap the socket in SSL if it's an HTTPS request
+        if self.use_ssl:
+            raw_sock = ssl.create_default_context().wrap_socket(
+                raw_sock, server_hostname=dest_host
+            )
+
+        # Wrap the socket in an HTTP(S) connection
+        conn_class = (
+            http.client.HTTPSConnection if self.use_ssl else http.client.HTTPConnection
+        )
+
+        self.conn = conn_class(dest_host, timeout=self.timeout)
+        self.conn.sock = raw_sock
+        self.proxy_host = proxy_host
+        self.proxy_port = proxy_port
+
+    def _retry_with_other_proxies(self, failed_index: int) -> bool:
+        """
+        Attempt to connect using other proxies, starting from index 0
+        (excluding the initially selected proxy).
+        Returns True if a new proxy is set, False if all proxies fail.
+        """
+        ordered_indices = list(range(len(PROXIES)))
+        ordered_indices.remove(failed_index)  # Skip the initially chosen proxy
+
+        for index in ordered_indices:
+            try:
+                self._connect_via_proxy(index)
+                self.proxy_index = index
+                return True  # Successfully switched to another proxy
+            except Exception:
+                continue  # Try the next proxy
+
+        return False  # No proxy worked
 
     def __enter__(self) -> "APIRequest":
         return self
@@ -96,27 +188,49 @@ class APIRequest:
         json_data: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, str]] = None,
     ) -> APIResponse:
+        if self.conn is None:
+            raise ValueError("Connection is not initialized")
+
         url = build_url(endpoint, params)
         req_headers = build_headers(headers)
-        body = None
+        body = json.dumps(json_data) if json_data else data
 
-        if json_data:
-            body = json.dumps(json_data)
-            if HEADER_CONTENT_TYPE not in req_headers:
-                req_headers[HEADER_CONTENT_TYPE] = JSON_CONTENT_TYPE
-        elif data:
-            body = data
+        if json_data and HEADER_CONTENT_TYPE not in req_headers:
+            req_headers[HEADER_CONTENT_TYPE] = JSON_CONTENT_TYPE
 
-        try:
-            self.conn.request(method, url, body=body, headers=req_headers)
-            response = self.conn.getresponse()
-            return self._handle_response(response)
-        except Exception as err:
-            return APIResponse(
-                status_code=0,
-                error=str(err),
-                body=None,
-            )
+        attempt = 0
+        max_attempts = len(PROXIES) if PROXIES_ENABLED else 1
+
+        parsed_base_url = urlparse(self.base_url)
+        host = parsed_base_url.hostname or ""
+
+        while attempt < max_attempts:
+            try:
+                if PROXIES_ENABLED:
+                    logger.debug(f"Using proxy: {self.proxy_host}:{self.proxy_port}")
+
+                    if self.proxy_host and self.proxy_host.startswith("http"):
+                        self.conn.set_tunnel(host)
+
+                self.conn.request(method, url, body=body, headers=req_headers)
+                response = self.conn.getresponse()
+                return self._handle_response(response)
+            except (ConnectionRefusedError, TimeoutError, OSError) as err:
+                logger.warning(
+                    f"Proxy {self.proxy_host}:{self.proxy_port} failed: {err}"
+                )
+
+                if PROXIES_ENABLED and self.proxy_index is not None:
+                    if not self._retry_with_other_proxies(self.proxy_index):
+                        return APIResponse(
+                            status_code=0, error="All proxies failed", body=None
+                        )
+                else:
+                    return APIResponse(status_code=0, error=str(err), body=None)
+
+            attempt += 1
+
+        return APIResponse(status_code=0, error="All proxies failed", body=None)
 
     def get(
         self,
@@ -177,13 +291,15 @@ class APIRequest:
                 body=data,
             )
         except json.JSONDecodeError:
-            # Return raw response if JSON decoding fails.
             return APIResponse(
                 status_code=response.status,
                 body=content,
             )
 
     def close(self) -> None:
+        if not self.conn:
+            return
+
         try:
             self.conn.close()
         except Exception:

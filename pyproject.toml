@@ -12,6 +12,8 @@ websockets = "^14.2"
 streamlit = "^1.42.0"
 polars = "^1.22.0"
 streamlit-autorefresh = "^1.0.1"
+python-dotenv = "^1.0.1"
+python-socks = "^2.7.1"
 
 
 [tool.poetry.group.dev.dependencies]
