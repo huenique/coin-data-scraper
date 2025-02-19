@@ -82,16 +82,19 @@ class APIRequest:
     def _initialize_connection(self) -> None:
         """Initialize connection, selecting a proxy if enabled and available."""
         if PROXIES_ENABLED and PROXIES:
+            self.use_proxy = True
             self.proxy_index = random.randint(0, len(PROXIES) - 1)
             try:
                 self._connect_via_proxy(self.proxy_index)
             except ValueError:
                 logger.warning(
-                    "Invalid proxy format. Falling back to direct connection."
+                    "Invalid proxy format detected during initialization. Using direct connection."
                 )
+                self.use_proxy = False
                 self._connect_direct()
         else:
             logger.info("No proxies available. Using direct connection.")
+            self.use_proxy = False
             self._connect_direct()
 
     def _connect_direct(self) -> None:
@@ -105,28 +108,42 @@ class APIRequest:
 
     def _connect_via_proxy(self, index: int) -> None:
         """Establish a connection using a proxy and attach it to self.conn."""
+
+        if not self.use_proxy:
+            return  # ✅ Do not attempt to connect via proxy if proxies are disabled
+
+        if not PROXIES or index >= len(PROXIES):
+            self.use_proxy = False
+            self._connect_direct()
+            return
+
         proxy = PROXIES[index]
+
+        if not proxy.strip():
+            self.use_proxy = False
+            self._connect_direct()
+            return
 
         if proxy.startswith("socks5h://"):
             proxy = proxy.replace("socks5h://", "socks5://", 1)
 
         logger.debug(f"Using Proxy: {proxy}")
 
-        # Parse the proxy URL manually
         parsed_proxy = urlparse(proxy)
         proxy_host = parsed_proxy.hostname
         proxy_port = parsed_proxy.port
 
         if not proxy_host or not proxy_port:
-            raise ValueError(f"Invalid proxy format: {proxy}")
+            logger.warning(f"Invalid proxy format: {proxy}. Using direct connection.")
+            self.use_proxy = False
+            self._connect_direct()
+            return
 
         if not self.base_url.startswith(("http://", "https://")):
             self.base_url = f"https://{self.base_url}"
 
-        # Create a proxy object
         proxy_client = Proxy.from_url(proxy)  # type: ignore
 
-        # Extract destination host and port
         parsed_base_url = urlparse(self.base_url)
         dest_host = parsed_base_url.hostname
         dest_port = parsed_base_url.port or (443 if self.use_ssl else 80)
@@ -134,23 +151,24 @@ class APIRequest:
         if not dest_host:
             raise ValueError(f"Invalid base URL: {self.base_url}")
 
-        # Connect to the proxy
         try:
             raw_sock = proxy_client.connect(dest_host=dest_host, dest_port=dest_port)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect through proxy {proxy} -> {e}")
+            logger.warning(
+                f"Proxy {proxy_host}:{proxy_port} failed. Falling back to direct connection."
+            )
+            self.use_proxy = False
+            self._connect_direct()
+            return
 
-        # Wrap the socket in SSL if it's an HTTPS request
         if self.use_ssl:
             raw_sock = ssl.create_default_context().wrap_socket(
                 raw_sock, server_hostname=dest_host
             )
 
-        # Wrap the socket in an HTTP(S) connection
         conn_class = (
             http.client.HTTPSConnection if self.use_ssl else http.client.HTTPConnection
         )
-
         self.conn = conn_class(dest_host, timeout=self.timeout)
         self.conn.sock = raw_sock
         self.proxy_host = proxy_host
