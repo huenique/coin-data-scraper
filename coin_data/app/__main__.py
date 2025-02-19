@@ -81,7 +81,7 @@ df = load_data(selected_file)
 
 # Display number of rows
 st.write(  # type: ignore
-    f"Number of graduated tokens whose metadata is available on pump.fun: {df.height}"
+    f"Total graduated tokens with metadata on pump.fun: {df.height}"
 )
 
 # Search Box for general filtering
