@@ -18,6 +18,7 @@ ENDPOINT_PREFIX = "/"
 HEADER_CONTENT_TYPE = "Content-Type"
 JSON_CONTENT_TYPE = "application/json"
 HTTP_ERROR_FORMAT = "HTTP {status_code} Error"
+MAX_PROXY_RETRIES = 3
 
 
 def build_url(endpoint: str, params: list[tuple[str, str]] | None = None) -> str:
@@ -193,22 +194,55 @@ class APIRequest:
 
     def _retry_with_other_proxies(self, failed_index: int) -> bool:
         """
-        Attempt to connect using other proxies, starting from index 0
-        (excluding the initially selected proxy).
+        Attempt to reconnect using the **same proxy first** before switching to others.
         Returns True if a new proxy is set, False if all proxies fail.
         """
-        ordered_indices = list(range(len(PROXIES)))
-        ordered_indices.remove(failed_index)  # Skip the initially chosen proxy
+        valid_proxies = [proxy.strip() for proxy in PROXIES if proxy and proxy.strip()]
+
+        if not valid_proxies:
+            logger.warning(
+                "No valid proxies available. Falling back to direct connection."
+            )
+            self.use_proxy = False
+            self._connect_direct()
+            return False
+
+        proxy_to_retry = valid_proxies[failed_index]
+
+        # Rtry the same proxy before switching
+        for attempt in range(MAX_PROXY_RETRIES):
+            try:
+                logger.info(
+                    f"Retrying proxy ({attempt + 1}/{MAX_PROXY_RETRIES}): {proxy_to_retry}"
+                )
+                self._connect_via_proxy(failed_index, valid_proxies)
+                self.proxy_index = failed_index
+                return True
+            except Exception as e:
+                logger.warning(
+                    f"Proxy {proxy_to_retry} failed on retry {attempt + 1}: {e}"
+                )
+
+        # If the same proxy fails `MAX_PROXY_RETRIES` times, switch to another one
+        ordered_indices = list(range(len(valid_proxies)))
+
+        # Skip the already-failed proxy
+        ordered_indices.remove(failed_index)
 
         for index in ordered_indices:
             try:
-                self._connect_via_proxy(index, PROXIES)
+                logger.info(f"Switching to new proxy: {valid_proxies[index]}")
+                self._connect_via_proxy(index, valid_proxies)
                 self.proxy_index = index
-                return True  # Successfully switched to another proxy
-            except Exception:
-                continue  # Try the next proxy
+                return True
+            except Exception as e:
+                logger.warning(f"Proxy {valid_proxies[index]} failed: {e}")
+                continue
 
-        return False  # No proxy worked
+        logger.warning("All proxies failed. Using direct connection.")
+        self.use_proxy = False
+        self._connect_direct()
+        return False
 
     def __enter__(self) -> "APIRequest":
         return self
