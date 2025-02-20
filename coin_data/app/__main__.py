@@ -134,9 +134,20 @@ df_filtered = df_filtered.with_columns(
     )
 )
 
-# Use st.data_editor with proper image rendering
+# Ensure market cap columns are numeric before formatting
+mcap_columns = ["highest_market_cap", "lowest_market_cap", "current_market_cap"]
+
+# Convert to numeric values first (removes commas if present)
+df_filtered = df_filtered.with_columns(
+    [pl.col(col).cast(pl.Float64) for col in mcap_columns]
+)
+
+# Use st.data_editor for proper numeric sorting
 st.data_editor(
-    df_filtered.to_pandas(),  # No need for .astype(str), as URLs should stay as is
-    column_config={"image_uri": st.column_config.ImageColumn("Image")},
+    df_filtered.to_pandas(),
+    column_config={
+        "image_uri": st.column_config.ImageColumn("Image"),
+        **{col: st.column_config.NumberColumn(col) for col in mcap_columns},
+    },
     hide_index=True,
 )
