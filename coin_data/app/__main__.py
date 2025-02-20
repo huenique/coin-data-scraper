@@ -1,13 +1,12 @@
 import glob
 import os
+from datetime import datetime, timezone
 
 import polars as pl
+import pytz
 import streamlit as st
 
 from coin_data.config import PUMPFUN_DATA_DIR, PUMPFUN_RESULTS_PATTERN
-
-# from streamlit_autorefresh import st_autorefresh  # type: ignore
-
 
 data_dir = PUMPFUN_DATA_DIR
 file_pattern = PUMPFUN_RESULTS_PATTERN
@@ -51,16 +50,20 @@ def market_cap_filter(df: pl.DataFrame, operator: str, value: float) -> pl.DataF
     )
 
 
+def convert_to_est(timestamp: int | float) -> str:
+    """Converts a timestamp to EST timezone."""
+    est = pytz.timezone("America/New_York")
+    dt = (
+        datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
+        .replace(tzinfo=pytz.utc)
+        .astimezone(est)
+    )
+    return dt.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+
 # Streamlit UI
 st.set_page_config(layout="wide")
 st.title("Coin Data")
-
-# # Auto-refresh every 2 seconds (2000ms) and clear cache
-# count = int(st_autorefresh(interval=2000, key="data_refresh"))  # type: ignore
-
-# # Clear cached data on every refresh
-# if count > 0:
-#     st.cache_data.clear()
 
 # Get available files
 csv_files = get_csv_files()
@@ -111,7 +114,7 @@ df_filtered = df_filtered.with_columns(
 # Append ?img-width=32 to the image URI
 df_filtered = df_filtered.with_columns(
     pl.col("image_uri").map_elements(
-        lambda url: f"{url}?img-width=64" if isinstance(url, str) else "",
+        lambda url: f"{url}?img-width=32" if isinstance(url, str) else "",
         return_dtype=pl.Utf8,
     )
 )
@@ -120,6 +123,14 @@ df_filtered = df_filtered.with_columns(
 df_filtered = df_filtered.with_columns(
     pl.col("image_uri").map_elements(
         lambda url: url if isinstance(url, str) else "", return_dtype=pl.Utf8
+    )
+)
+
+# Convert created_timestamp to EST
+df_filtered = df_filtered.with_columns(
+    pl.col("created_timestamp").map_elements(
+        lambda ts: convert_to_est(ts) if isinstance(ts, (int, float)) else "",
+        return_dtype=pl.Utf8,
     )
 )
 
