@@ -3,9 +3,11 @@ import os
 
 import polars as pl
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh  # type: ignore
 
 from coin_data.config import PUMPFUN_DATA_DIR, PUMPFUN_RESULTS_PATTERN
+
+# from streamlit_autorefresh import st_autorefresh  # type: ignore
+
 
 data_dir = PUMPFUN_DATA_DIR
 file_pattern = PUMPFUN_RESULTS_PATTERN
@@ -19,12 +21,10 @@ def get_csv_files():
 def load_data(file_path: str) -> pl.DataFrame:
     """Loads CSV data with caching, but will be cleared on refresh."""
     df = pl.DataFrame()
-
     try:
         df = pl.read_csv(file_path)
     except pl.exceptions.NoDataError as e:
         st.error(f"Error loading data: {e}")
-
     return df
 
 
@@ -32,15 +32,11 @@ def search_filter(df: pl.DataFrame, query: str) -> pl.DataFrame:
     """Filters the dataframe based on a search query."""
     if not query.strip():
         return df
-
     df_str = df.with_columns(pl.all().cast(pl.Utf8).fill_null(""))
-
     combined = df_str.with_columns(
         pl.concat_str(pl.all(), separator=" ").alias("combined")
     )
-
     mask = combined["combined"].str.contains(query, literal=False, strict=False)
-
     return df.filter(mask)
 
 
@@ -48,7 +44,6 @@ def market_cap_filter(df: pl.DataFrame, operator: str, value: float) -> pl.DataF
     """Filters the dataframe based on the market cap operator and value."""
     if operator not in [">", "<"] or "current_market_cap" not in df.columns:
         return df
-
     return df.filter(
         df["current_market_cap"] > value
         if operator == ">"
@@ -60,12 +55,12 @@ def market_cap_filter(df: pl.DataFrame, operator: str, value: float) -> pl.DataF
 st.set_page_config(layout="wide")
 st.title("Coin Data")
 
-# Auto-refresh every 2 seconds (2000ms) and clear cache
-count = int(st_autorefresh(interval=2000, key="data_refresh"))  # type: ignore
+# # Auto-refresh every 2 seconds (2000ms) and clear cache
+# count = int(st_autorefresh(interval=2000, key="data_refresh"))  # type: ignore
 
-# Clear cached data on every refresh
-if count > 0:
-    st.cache_data.clear()
+# # Clear cached data on every refresh
+# if count > 0:
+#     st.cache_data.clear()
 
 # Get available files
 csv_files = get_csv_files()
@@ -106,5 +101,31 @@ df_filtered = search_filter(df, search_query)
 if market_cap_operator is not None:
     df_filtered = market_cap_filter(df_filtered, market_cap_operator, market_cap_value)
 
-# Display filtered DataFrame
-st.dataframe(df_filtered)  # type: ignore
+# Modify Image URIs to use Pinata Gateway
+df_filtered = df_filtered.with_columns(
+    pl.col("image_uri").str.replace(
+        "https://ipfs.io/ipfs/", "https://pump.mypinata.cloud/ipfs/"
+    )
+)
+
+# Append ?img-width=32 to the image URI
+df_filtered = df_filtered.with_columns(
+    pl.col("image_uri").map_elements(
+        lambda url: f"{url}?img-width=64" if isinstance(url, str) else "",
+        return_dtype=pl.Utf8,
+    )
+)
+
+# Ensure image_uri contains direct image URLs
+df_filtered = df_filtered.with_columns(
+    pl.col("image_uri").map_elements(
+        lambda url: url if isinstance(url, str) else "", return_dtype=pl.Utf8
+    )
+)
+
+# Use st.data_editor with proper image rendering
+st.data_editor(
+    df_filtered.to_pandas(),  # No need for .astype(str), as URLs should stay as is
+    column_config={"image_uri": st.column_config.ImageColumn("Image")},
+    hide_index=True,
+)
