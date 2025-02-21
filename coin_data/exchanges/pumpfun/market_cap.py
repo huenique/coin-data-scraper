@@ -220,3 +220,46 @@ def get_market_cap_with_times(
         "current_market_cap": current_market_cap,
         "current_market_cap_time": current_time,
     }
+
+
+if __name__ == "__main__":
+    import sys
+
+    from coin_data.exchanges.pumpfun.ohlc import get_ohlc
+
+    token_address = "mcSfRWkZrYdiPqJNUrC5cFz9zBgCEF9An2USaXorkeu"
+    token_response_data = get_token_data(token_address)
+
+    token_data = token_response_data.data
+    if token_data is None:
+        logger.error(f"❌ Failed to fetch token data for: {token_address}")
+        sys.exit(1)
+
+    relationships = token_data.relationships
+    if not relationships:
+        logger.error(f"❌ Missing token pair data for: {token_address}")
+        sys.exit(1)
+
+    included_data = token_response_data.included
+    if not included_data:
+        logger.error(f"❌ Missing included data for: {token_address}")
+        sys.exit(1)
+
+    circulating_supply = next(
+        (
+            d.attributes["circulating_supply"]
+            for d in included_data
+            if d.id == token_data.attributes.base_token_id
+        ),
+        None,
+    )
+
+    if circulating_supply is None:
+        logger.error(f"❌ Missing circulating supply for: {token_address}")
+        sys.exit(1)
+
+    token_pair_id = relationships.pairs["data"][0]["id"]
+    ohlc_data = get_ohlc(token_data.id, token_pair_id)
+    market_cap = get_market_cap_with_times(ohlc_data, circulating_supply)
+
+    logger.info(f"✅ Processed token mcap: {market_cap}")

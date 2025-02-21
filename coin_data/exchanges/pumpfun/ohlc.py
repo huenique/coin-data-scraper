@@ -44,7 +44,7 @@ def get_ohlc(pool_id: str, pair_id: str) -> CandleData:
     current_date = datetime.datetime.now(datetime.timezone.utc)
     count_back = str(int((current_date - PUMPFUN_LAUNCH_DATE).total_seconds() // 3600))
     params = [
-        ("resolution", "60"),
+        ("resolution", "15"),
         ("from_timestamp", PUMPFUN_LAUNCH_DATE_TIMESTAMP),
         ("to_timestamp", current_timestamp),
         ("for_update", "false"),
