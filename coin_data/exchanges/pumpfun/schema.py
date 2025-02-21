@@ -1,4 +1,45 @@
 from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class TotalVolume24h:
+    total_volume_24h: int
+    total_volume_change_24h: float
+    total_trades_24h: int
+    total_trades_change_24h: float
+    token1: str
+    token2: str
+    token1_account: str
+    token2_account: str
+    token1_amount: float
+    token2_amount: float
+    tvl: float
+    create_tx_hash: str | None = None
+    create_block_time: int | None = None
+    creator: str | None = None
+
+
+@dataclass
+class Volume:
+    success: bool
+    data: TotalVolume24h
+    metadata: dict[str, Any]
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Volume":
+        return cls(
+            success=data["success"],
+            data=TotalVolume24h(**data["data"]),
+            metadata=data["metadata"],
+        )
+
+
+@dataclass
+class HolderTotal:
+    success: bool
+    data: int
+    metadata: dict[str, Any]
 
 
 @dataclass
@@ -74,22 +115,19 @@ class BubbleGraphData:
 @dataclass
 class Token:
     name: str
-    mint: str
-    image_uri: str
     symbol: str
+    mint: str
+    volume: int
+    holder_count: int
+    image_uri: str
     telegram: str
     twitter: str
     website: str
     created_timestamp: str
     raydium_pool: str
-    virtual_sol_reserves: int
-    virtual_token_reserves: int
-    total_supply: int
     highest_market_cap: int
     highest_market_cap_timestamp: int
     lowest_market_cap: int
     lowest_market_cap_timestamp: int
     current_market_cap: int
     current_market_cap_timestamp: int
-    holder_count: int
-    holder_count_meta: str

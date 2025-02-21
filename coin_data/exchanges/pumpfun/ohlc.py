@@ -3,7 +3,6 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from coin_data import logger
 from coin_data.exchanges.common import DefaultMixin
 from coin_data.exchanges.pumpfun.constants import (
     GECKO_TERMINAL_BASE_URL,
@@ -11,6 +10,7 @@ from coin_data.exchanges.pumpfun.constants import (
     PUMPFUN_LAUNCH_DATE,
     PUMPFUN_LAUNCH_DATE_TIMESTAMP,
 )
+from coin_data.logging import logger
 from coin_data.requests import APIRequest
 
 

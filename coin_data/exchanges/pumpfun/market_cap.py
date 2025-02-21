@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from coin_data import logger
 from coin_data.exchanges.common import DefaultMixin
 from coin_data.exchanges.pumpfun.constants import (
     GECKO_TERMINAL_BASE_URL,
     GECKO_TERMINAL_POOLS_ENDPOINT,
 )
 from coin_data.exchanges.pumpfun.ohlc import CandleData
+from coin_data.logging import logger
 from coin_data.requests import APIRequest
 
 RelationshipData = dict[str, Any]

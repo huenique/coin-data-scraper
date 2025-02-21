@@ -6,11 +6,10 @@ from datetime import datetime, timezone
 from io import StringIO
 from typing import Tuple
 
-from coin_data import logger
+from coin_data.exchanges.solscan import SOLSCAN_BASE_URL, SOLSCAN_EXPORT_ENDPOINT
+from coin_data.logging import logger
 from coin_data.requests import APIRequest
 
-BASE_URL = "api-v2.solscan.io"
-ENDPOINT = "v2/account/transfer/export"
 PUMPFUN_RAYDIUM_MIGRATION = "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg"
 ACTIVITY_SPL_TRANSFER = "ACTIVITY_SPL_TRANSFER"
 RAYDIUM_AUTHORITY_V4 = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
@@ -32,7 +31,9 @@ class Transaction:
 
 
 class PumpfunTokenDataExplorer:
-    def __init__(self, base_url: str = BASE_URL, endpoint: str = ENDPOINT) -> None:
+    def __init__(
+        self, base_url: str = SOLSCAN_BASE_URL, endpoint: str = SOLSCAN_EXPORT_ENDPOINT
+    ) -> None:
         self.base_url = base_url
         self.endpoint = endpoint
 

@@ -33,6 +33,8 @@ def get_market_cap(session: Session, contract_address: str) -> None:
 
 
 if __name__ == "__main__":
+    # Smoke test
+
     if len(sys.argv) != 2:
         print("Usage: python get_market_cap.py <contract_address>")
         sys.exit(1)

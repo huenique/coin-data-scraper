@@ -10,8 +10,8 @@ from urllib.parse import urlparse
 
 from python_socks.sync import Proxy
 
-from coin_data import logger
 from coin_data.config import PROXIES_ENABLED
+from coin_data.logging import logger
 from coin_data.proxies import PROXIES
 
 ENDPOINT_PREFIX = "/"
@@ -64,7 +64,6 @@ class APIResponse(JSONConvertible, StatusRaisable):
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
             msg = self.error or HTTP_ERROR_FORMAT.format(status_code=self.status_code)
-            logger.error(self.body)
             raise Exception(msg)
 
 
@@ -102,7 +101,7 @@ class APIRequest:
                 self.use_proxy = False
                 self._connect_direct()
         else:
-            logger.info("No valid proxies available. Using direct connection.")
+            logger.debug("No valid proxies available. Using direct connection.")
             self.use_proxy = False
             self._connect_direct()
 

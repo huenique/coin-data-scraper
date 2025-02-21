@@ -1,6 +1,6 @@
 import polars as pl
 
-from coin_data import logger
+from coin_data.logging import logger
 
 activities_path = ""
 results_path = ""
