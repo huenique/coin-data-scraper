@@ -78,9 +78,7 @@ selected_file = st.selectbox("Select a CSV file:", csv_files)
 df = load_data(selected_file)
 
 # Display number of rows
-st.write(  # type: ignore
-    f"Total graduated tokens with metadata on pump.fun: {df.height}"
-)
+st.write(f"Total graduated tokens with metadata on pump.fun: {df.height}")  # type: ignore
 
 # Search Box for general filtering
 search_query = st.text_input("Search:", "")
@@ -134,19 +132,44 @@ df_filtered = df_filtered.with_columns(
     )
 )
 
-# Ensure market cap columns are numeric before formatting
-mcap_columns = ["highest_market_cap", "lowest_market_cap", "current_market_cap"]
+# Custom column headers
+column_headers = {
+    "name": "Token Name",
+    "symbol": "Symbol",
+    "mint": "Mint Address",
+    "volume": "Trading Volume",
+    "holder_count": "Holder Count",
+    "image_uri": "Image",
+    "telegram": "Telegram",
+    "twitter": "Twitter",
+    "website": "Website",
+    "created_timestamp": "Created (EST)",
+    "highest_market_cap": "Highest Market Cap ($)",
+    "highest_market_cap_timestamp": "Highest Market Cap Timestamp",
+    "lowest_market_cap": "Lowest Market Cap ($)",
+    "lowest_market_cap_timestamp": "Lowest Market Cap Timestamp",
+    "current_market_cap": "Current Market Cap ($)",
+    "current_market_cap_timestamp": "Current Market Cap Timestamp",
+}
 
-# Convert to numeric values first (removes commas if present)
-df_filtered = df_filtered.with_columns(
-    [pl.col(col).cast(pl.Float64) for col in mcap_columns]
-)
+# Rename columns
+df_filtered = df_filtered.rename(column_headers)
+
+# Exclude Raydium Pool column from display
+display_columns = [col for col in df_filtered.columns if col.lower() != "raydium_pool"]
+
+# Define mcap_columns list
+mcap_columns = [
+    "Highest Market Cap ($)",
+    "Lowest Market Cap ($)",
+    "Current Market Cap ($)",
+]
 
 # Use st.data_editor for proper numeric sorting
 st.data_editor(
-    df_filtered.to_pandas(),
+    df_filtered.select(display_columns).to_pandas(),
     column_config={
-        "image_uri": st.column_config.ImageColumn("Image"),
+        "Image": st.column_config.ImageColumn("Image"),
         **{col: st.column_config.NumberColumn(col) for col in mcap_columns},
     },
     hide_index=True,
