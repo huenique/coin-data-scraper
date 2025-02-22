@@ -92,17 +92,11 @@ def process_token(token: Transaction) -> Token | None:
             created_timestamp=coin_meta.created_timestamp,
             raydium_pool=coin_meta.raydium_pool,
             highest_market_cap=market_cap.get("highest_market_cap", 0),
-            highest_market_cap_timestamp=market_cap.get(
-                "highest_market_cap_timestamp", 0
-            ),
+            highest_market_cap_timestamp=market_cap.get("highest_market_cap_time", 0),
             lowest_market_cap=market_cap.get("lowest_market_cap", 0),
-            lowest_market_cap_timestamp=market_cap.get(
-                "lowest_market_cap_timestamp", 0
-            ),
+            lowest_market_cap_timestamp=market_cap.get("lowest_market_cap_time", 0),
             current_market_cap=market_cap.get("current_market_cap", 0),
-            current_market_cap_timestamp=market_cap.get(
-                "current_market_cap_timestamp", 0
-            ),
+            current_market_cap_timestamp=market_cap.get("current_market_cap_time", 0),
         )
 
         logger.info(f"✅ Processed token {coin_meta.name} ({token.token_address})")
