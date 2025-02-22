@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import polars as pl
 import pytz
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh  # type: ignore
 
 from coin_data.config import PUMPFUN_DATA_DIR, PUMPFUN_RESULTS_PATTERN
 
@@ -65,17 +66,35 @@ def convert_to_est(timestamp: int | float) -> str:
 st.set_page_config(layout="wide")
 st.title("Coin Data")
 
+# Button to manually refresh the data
+if st.button("Refresh Data"):
+    st.cache_data.clear()  # Clear cached data
+
+    # Clear session state to reset UI elements
+    for key in st.session_state.keys():
+        del st.session_state[key]
+
+    st.rerun()
+
+
 # Get available files
 csv_files = get_csv_files()
 if not csv_files:
     st.error(f"No CSV files found in {PUMPFUN_DATA_DIR}")
     st.stop()
 
-# Dropdown to select file
-selected_file = st.selectbox("Select a CSV file:", csv_files)
+# Ensure "selected_file" exists in session state
+if "selected_file" not in st.session_state:
+    st.session_state["selected_file"] = (
+        csv_files[0] if csv_files else None
+    )  # Default to first file
+
+# Dropdown to select file (resets properly)
+selected_file = st.selectbox("Select a CSV file:", csv_files, key="selected_file")
 
 # Load and display data
 df = load_data(selected_file)
+
 
 # Display number of rows
 st.write(f"Total graduated tokens with metadata on pump.fun: {df.height}")  # type: ignore

@@ -30,11 +30,10 @@ def fetch_24_hour_volume(token: str) -> int:
 
         response.raise_for_status()
 
-        if response.body is None:
-            raise ValueError(f"{response.body=}")
-
-        if not isinstance(response.body, dict):
-            raise ValueError(f"{response.body=}")
+        if response.body is None or not isinstance(response.body, dict):
+            raise ValueError(
+                f"Failed to fetch 24-hour volume for token {token}: {response.body or response.error}"
+            )
 
         volume = Volume.from_dict(response.body)
 
@@ -54,11 +53,10 @@ def fetch_total_holders(token: str) -> int:
 
         response.raise_for_status()
 
-        if response.body is None:
-            raise ValueError(f"{response.body=}")
-
-        if not isinstance(response.body, dict):
-            raise ValueError(f"{response.body=}")
+        if response.body is None or not isinstance(response.body, dict):
+            raise ValueError(
+                f"Failed to fetch total holders for token {token}: {response.body or response.error}"
+            )
 
         holder_total = HolderTotal(**cast_resp_body(response.body))
 
@@ -77,11 +75,10 @@ def fetch_coin_top_holders(token: str) -> List[Holder]:
 
         response.raise_for_status()
 
-        if response.body is None:
-            raise ValueError(f"{response.body=}")
-
-        if not isinstance(response.body, dict):
-            raise ValueError(f"{response.body=}")
+        if response.body is None or not isinstance(response.body, dict):
+            raise ValueError(
+                f"Failed to fetch top holders for token {token}: {response.body or response.error}"
+            )
 
         data_model = BubbleGraphData(**cast_resp_body(response.body))
 

@@ -136,7 +136,7 @@ def update_results_csv(json_data: list[Transaction], results_file: Path):
                     writer.writerow(dataclasses.asdict(result))
                     csvfile.flush()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             futures = [executor.submit(process_token, token) for token in json_data]
             for future in futures:
                 future.add_done_callback(write_result_callback)
