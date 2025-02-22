@@ -156,7 +156,7 @@ column_headers = {
     "name": "Token Name",
     "symbol": "Symbol",
     "mint": "Mint Address",
-    "volume": "Trading Volume",
+    "volume": "Trading Volume ($)",
     "holder_count": "Holder Count",
     "image_uri": "Image",
     "telegram": "Telegram",
