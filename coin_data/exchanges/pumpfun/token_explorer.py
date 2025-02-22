@@ -1,15 +1,17 @@
 import csv
 import json
-import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 from io import StringIO
 from typing import Tuple
+
+import pytz
 
 from coin_data.exchanges.solscan import SOLSCAN_BASE_URL, SOLSCAN_EXPORT_ENDPOINT
 from coin_data.logging import logger
 from coin_data.requests import APIRequest
 
+EST = pytz.timezone("America/New_York")
 PUMPFUN_RAYDIUM_MIGRATION = "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg"
 ACTIVITY_SPL_TRANSFER = "ACTIVITY_SPL_TRANSFER"
 RAYDIUM_AUTHORITY_V4 = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
@@ -40,36 +42,23 @@ class PumpfunTokenDataExplorer:
     @staticmethod
     def get_day_timestamps(date_str: str) -> Tuple[int, int]:
         try:
-            target_date = datetime.strptime(date_str, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
+            # Parse the input date as naive and make it EST-aware
+            target_date = datetime.strptime(date_str, "%Y-%m-%d")
+            est_target_date = EST.localize(target_date)  # Localize to EST/EDT
         except ValueError:
             raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
 
-        # Start of the given day (00:00:00)
+        # Start of the day in EST (00:00:00)
         day_start = int(
-            datetime(
-                target_date.year,
-                target_date.month,
-                target_date.day,
-                0,
-                0,
-                0,
-                tzinfo=timezone.utc,
+            est_target_date.replace(
+                hour=0, minute=0, second=0, microsecond=0
             ).timestamp()
         )
 
-        # End of the given day (23:59:59)
+        # End of the day in EST (23:59:59)
         day_end = int(
-            datetime(
-                target_date.year,
-                target_date.month,
-                target_date.day,
-                23,
-                59,
-                59,
-                999999,
-                tzinfo=timezone.utc,
+            est_target_date.replace(
+                hour=23, minute=59, second=59, microsecond=999999
             ).timestamp()
         )
 
@@ -77,9 +66,22 @@ class PumpfunTokenDataExplorer:
 
     @staticmethod
     def calculate_yesterday_timestamps() -> Tuple[int, int]:
-        today_midnight = int(time.time()) // 86400 * 86400
-        yesterday_start = today_midnight - 86400
-        yesterday_end = today_midnight - 1
+        now = datetime.now(pytz.utc)  # Get current time in UTC
+        est_now = now.astimezone(EST)  # Convert to EST
+        est_midnight = est_now.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )  # Midnight in EST
+        yesterday_midnight = est_midnight - timedelta(
+            days=1
+        )  # Get yesterday's midnight
+
+        yesterday_start = int(
+            yesterday_midnight.timestamp()
+        )  # Start of yesterday in EST
+        yesterday_end = int(
+            (est_midnight - timedelta(seconds=1)).timestamp()
+        )  # End of yesterday in EST
+
         return yesterday_start, yesterday_end
 
     def retrieve_token_activity(self, yesterday_start: int, yesterday_end: int) -> str:
