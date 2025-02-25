@@ -52,14 +52,14 @@ def market_cap_filter(df: pl.DataFrame, operator: str, value: float) -> pl.DataF
 
 
 def convert_to_est(timestamp: int | float) -> str:
-    """Converts a timestamp to EST timezone."""
+    """Converts a timestamp to EST timezone in 12-hour format."""
     est = pytz.timezone("America/New_York")
     dt = (
         datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
         .replace(tzinfo=pytz.utc)
         .astimezone(est)
     )
-    return dt.strftime("%Y-%m-%d %H:%M:%S %Z")
+    return dt.strftime("%Y-%m-%d %I:%M:%S %p %Z")
 
 
 # Streamlit UI
@@ -128,10 +128,12 @@ df_filtered = df_filtered.with_columns(
     )
 )
 
-# Append ?img-width=32 to the image URI
+# Append ?img-width=128&img-height=128 to the image URI
 df_filtered = df_filtered.with_columns(
     pl.col("image_uri").map_elements(
-        lambda url: f"{url}?img-width=32" if isinstance(url, str) else "",
+        lambda url: (
+            f"{url}?img-width=258&img-height=258" if isinstance(url, str) else ""
+        ),
         return_dtype=pl.Utf8,
     )
 )
@@ -156,7 +158,7 @@ column_headers = {
     "name": "Token Name",
     "symbol": "Symbol",
     "mint": "Mint Address",
-    "volume": "Trading Volume ($)",
+    "volume": "24H Trading Volume ($)",
     "holder_count": "Holder Count",
     "image_uri": "Image",
     "telegram": "Telegram",
@@ -189,6 +191,9 @@ st.data_editor(
     df_filtered.select(display_columns).to_pandas(),
     column_config={
         "Image": st.column_config.ImageColumn("Image"),
+        "Telegram": st.column_config.LinkColumn("Telegram", width="medium"),
+        "Twitter": st.column_config.LinkColumn("Twitter", width="medium"),
+        "Website": st.column_config.LinkColumn("Website", width="medium"),
         **{col: st.column_config.NumberColumn(col) for col in mcap_columns},
     },
     hide_index=True,
