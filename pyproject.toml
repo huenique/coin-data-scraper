@@ -14,7 +14,9 @@ polars = "^1.22.0"
 streamlit-autorefresh = "^1.0.1"
 python-dotenv = "^1.0.1"
 python-socks = "^2.7.1"
-
+litestar = {extras = ["picologging", "standard"], version = "^2.14.0"}
+python-socketio = "^5.12.1"
+aiohttp = "^3.11.13"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9.6"
