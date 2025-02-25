@@ -8,6 +8,8 @@ from litestar.types.callable_types import GetLogger
 class CustomLoggingConfig(BaseLoggingConfig):
     """Custom logging configuration using picologging with Litestar/Uvicorn formatting."""
 
+    log_exceptions: typing.Literal["always", "debug", "never"] = "always"
+
     COLORS = {
         "DEBUG": "\033[36m",  # Cyan
         "INFO": "\033[32m",  # Green

@@ -5,6 +5,7 @@ from litestar import get
 
 from coin_data.server.constants import CONTRACTS_BATCH_URL, HEADERS
 from coin_data.server.models import ForwardedContract
+from coin_data.server.utils import convert_keys_to_snake_case
 
 
 @get("/contracts")
@@ -18,4 +19,7 @@ async def get_contracts_batch() -> Union[Dict[str, ForwardedContract], Dict[str,
 
     data = response.json()
 
-    return {key: ForwardedContract(**value) for key, value in data.items()}
+    return {
+        key: ForwardedContract(**convert_keys_to_snake_case(value))
+        for key, value in data.items()
+    }
