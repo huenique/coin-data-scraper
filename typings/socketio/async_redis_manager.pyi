@@ -28,9 +28,8 @@ class AsyncRedisManager(AsyncPubSubManager):
     :param redis_options: additional keyword arguments to be passed to
                           ``aioredis.from_url()``.
     """
+
     name = ...
-    def __init__(self, url=..., channel=..., write_only=..., logger=..., redis_options=...) -> None:
-        ...
-    
-
-
+    def __init__(
+        self, url=..., channel=..., write_only=..., logger=..., redis_options=...
+    ) -> None: ...

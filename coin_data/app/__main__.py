@@ -59,7 +59,7 @@ def convert_to_est(timestamp: int | float) -> str:
         .replace(tzinfo=pytz.utc)
         .astimezone(est)
     )
-    return dt.strftime("%Y-%m-%d %I:%M:%S %p %Z")
+    return dt.strftime("%B %d, %Y %I:%M %p %Z")
 
 
 # Streamlit UI

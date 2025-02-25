@@ -41,8 +41,12 @@ class ASGIApp(engineio.ASGIApp):
         })
         uvicorn.run(app, host='127.0.0.1', port=5000)
     """
-    def __init__(self, socketio_server, other_asgi_app=..., static_files=..., socketio_path=..., on_startup=..., on_shutdown=...) -> None:
-        ...
-    
-
-
+    def __init__(
+        self,
+        socketio_server,
+        other_asgi_app=...,
+        static_files=...,
+        socketio_path=...,
+        on_startup=...,
+        on_shutdown=...,
+    ) -> None: ...

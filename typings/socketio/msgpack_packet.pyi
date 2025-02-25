@@ -9,10 +9,7 @@ class MsgPackPacket(packet.Packet):
     def encode(self):
         """Encode the packet for transmission."""
         ...
-    
-    def decode(self, encoded_packet): # -> None:
+
+    def decode(self, encoded_packet):  # -> None:
         """Decode a transmitted package."""
         ...
-    
-
-

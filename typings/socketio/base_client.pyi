@@ -6,7 +6,8 @@ import engineio
 
 default_logger = ...
 reconnecting_clients = ...
-def signal_handler(sig, frame): # -> Any:
+
+def signal_handler(sig, frame):  # -> Any:
     """SIGINT handler.
 
     Notify any clients that are in a reconnect loop to abort. Other
@@ -15,16 +16,26 @@ def signal_handler(sig, frame): # -> Any:
     ...
 
 original_signal_handler = ...
+
 class BaseClient:
     reserved_events = ...
     reason = engineio.Client.reason
-    def __init__(self, reconnection=..., reconnection_attempts=..., reconnection_delay=..., reconnection_delay_max=..., randomization_factor=..., logger=..., serializer=..., json=..., handle_sigint=..., **kwargs) -> None:
+    def __init__(
+        self,
+        reconnection=...,
+        reconnection_attempts=...,
+        reconnection_delay=...,
+        reconnection_delay_max=...,
+        randomization_factor=...,
+        logger=...,
+        serializer=...,
+        json=...,
+        handle_sigint=...,
+        **kwargs,
+    ) -> None: ...
+    def is_asyncio_based(self):  # -> Literal[False]:
         ...
-    
-    def is_asyncio_based(self): # -> Literal[False]:
-        ...
-    
-    def on(self, event, handler=..., namespace=...): # -> Callable[..., Any] | None:
+    def on(self, event, handler=..., namespace=...):  # -> Callable[..., Any] | None:
         """Register an event handler.
 
         :param event: The event name. It can be any string. The event names
@@ -69,8 +80,8 @@ class BaseClient:
           argument, followed by any arguments specific to the event.
         """
         ...
-    
-    def event(self, *args, **kwargs): # -> Callable[..., object] | Callable[..., Any]:
+
+    def event(self, *args, **kwargs):  # -> Callable[..., object] | Callable[..., Any]:
         """Decorator to register an event handler.
 
         This is a simplified version of the ``on()`` method that takes the
@@ -95,8 +106,8 @@ class BaseClient:
                 print('Received data: ', data)
         """
         ...
-    
-    def register_namespace(self, namespace_handler): # -> None:
+
+    def register_namespace(self, namespace_handler):  # -> None:
         """Register a namespace handler object.
 
         :param namespace_handler: An instance of a :class:`Namespace`
@@ -104,8 +115,8 @@ class BaseClient:
                                   for a namespace.
         """
         ...
-    
-    def get_sid(self, namespace=...): # -> None:
+
+    def get_sid(self, namespace=...):  # -> None:
         """Return the ``sid`` associated with a connection.
 
         :param namespace: The Socket.IO namespace. If this argument is omitted
@@ -118,7 +129,7 @@ class BaseClient:
         string.
         """
         ...
-    
+
     def transport(self):
         """Return the name of the transport used by the client.
 
@@ -126,6 +137,3 @@ class BaseClient:
         and ``'websocket'``.
         """
         ...
-    
-
-

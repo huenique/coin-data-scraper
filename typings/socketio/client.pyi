@@ -67,7 +67,18 @@ class Client(base_client.BaseClient):
                             fatal errors are logged even when
                             ``engineio_logger`` is ``False``.
     """
-    def connect(self, url, headers=..., auth=..., transports=..., namespaces=..., socketio_path=..., wait=..., wait_timeout=..., retry=...): # -> None:
+    def connect(
+        self,
+        url,
+        headers=...,
+        auth=...,
+        transports=...,
+        namespaces=...,
+        socketio_path=...,
+        wait=...,
+        wait_timeout=...,
+        retry=...,
+    ):  # -> None:
         """Connect to a Socket.IO server.
 
         :param url: The URL of the Socket.IO server. It can include custom
@@ -112,16 +123,16 @@ class Client(base_client.BaseClient):
             sio.connect('http://localhost:5000')
         """
         ...
-    
-    def wait(self): # -> None:
+
+    def wait(self):  # -> None:
         """Wait until the connection with the server ends.
 
         Client applications can use this function to block the main thread
         during the life of the connection.
         """
         ...
-    
-    def emit(self, event, data=..., namespace=..., callback=...): # -> None:
+
+    def emit(self, event, data=..., namespace=..., callback=...):  # -> None:
         """Emit a custom event to the server.
 
         :param event: The event name. It can be any string. The event names
@@ -146,8 +157,8 @@ class Client(base_client.BaseClient):
         situation.
         """
         ...
-    
-    def send(self, data, namespace=..., callback=...): # -> None:
+
+    def send(self, data, namespace=..., callback=...):  # -> None:
         """Send a message to the server.
 
         This function emits an event with the name ``'message'``. Use
@@ -166,8 +177,8 @@ class Client(base_client.BaseClient):
                          by the server.
         """
         ...
-    
-    def call(self, event, data=..., namespace=..., timeout=...): # -> None:
+
+    def call(self, event, data=..., namespace=..., timeout=...):  # -> None:
         """Emit a custom event to the server and wait for the response.
 
         This method issues an emit with a callback and waits for the callback
@@ -197,12 +208,12 @@ class Client(base_client.BaseClient):
         situation.
         """
         ...
-    
-    def disconnect(self): # -> None:
+
+    def disconnect(self):  # -> None:
         """Disconnect from the server."""
         ...
-    
-    def shutdown(self): # -> None:
+
+    def shutdown(self):  # -> None:
         """Stop the client.
 
         If the client is connected to a server, it is disconnected. If the
@@ -211,7 +222,7 @@ class Client(base_client.BaseClient):
         attempting to reconnect, then this function does nothing.
         """
         ...
-    
+
     def start_background_task(self, target, *args, **kwargs):
         """Start a background task using the appropriate async model.
 
@@ -228,7 +239,7 @@ class Client(base_client.BaseClient):
         complete.
         """
         ...
-    
+
     def sleep(self, seconds=...):
         """Sleep for the requested amount of time using the appropriate async
         model.
@@ -238,6 +249,3 @@ class Client(base_client.BaseClient):
         selected async mode.
         """
         ...
-    
-
-

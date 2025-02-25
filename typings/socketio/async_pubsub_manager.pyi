@@ -18,14 +18,22 @@ class AsyncPubSubManager(AsyncManager):
     :param channel: The channel name on which the server sends and receives
                     notifications.
     """
+
     name = ...
-    def __init__(self, channel=..., write_only=..., logger=...) -> None:
+    def __init__(self, channel=..., write_only=..., logger=...) -> None: ...
+    def initialize(self):  # -> None:
         ...
-    
-    def initialize(self): # -> None:
-        ...
-    
-    async def emit(self, event, data, namespace=..., room=..., skip_sid=..., callback=..., to=..., **kwargs): # -> None:
+    async def emit(
+        self,
+        event,
+        data,
+        namespace=...,
+        room=...,
+        skip_sid=...,
+        callback=...,
+        to=...,
+        **kwargs,
+    ):  # -> None:
         """Emit a message to a single client, a room, or all the clients
         connected to the namespace.
 
@@ -37,21 +45,14 @@ class AsyncPubSubManager(AsyncManager):
         Note: this method is a coroutine.
         """
         ...
-    
-    async def can_disconnect(self, sid, namespace): # -> bool | None:
-        ...
-    
-    async def disconnect(self, sid, namespace, **kwargs): # -> None:
-        ...
-    
-    async def enter_room(self, sid, namespace, room, eio_sid=...): # -> None:
-        ...
-    
-    async def leave_room(self, sid, namespace, room): # -> None:
-        ...
-    
-    async def close_room(self, room, namespace=...): # -> None:
-        ...
-    
 
-
+    async def can_disconnect(self, sid, namespace):  # -> bool | None:
+        ...
+    async def disconnect(self, sid, namespace, **kwargs):  # -> None:
+        ...
+    async def enter_room(self, sid, namespace, room, eio_sid=...):  # -> None:
+        ...
+    async def leave_room(self, sid, namespace, room):  # -> None:
+        ...
+    async def close_room(self, room, namespace=...):  # -> None:
+        ...

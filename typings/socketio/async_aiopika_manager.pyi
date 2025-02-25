@@ -29,9 +29,6 @@ class AsyncAioPikaManager(AsyncPubSubManager):
                        default of ``False`` initializes the class for emitting
                        and receiving.
     """
+
     name = ...
-    def __init__(self, url=..., channel=..., write_only=..., logger=...) -> None:
-        ...
-    
-
-
+    def __init__(self, url=..., channel=..., write_only=..., logger=...) -> None: ...

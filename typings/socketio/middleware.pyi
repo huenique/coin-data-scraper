@@ -30,15 +30,10 @@ class WSGIApp(engineio.WSGIApp):
         app = socketio.WSGIApp(sio, wsgi_app)
         eventlet.wsgi.server(eventlet.listen(('', 8000)), app)
     """
-    def __init__(self, socketio_app, wsgi_app=..., static_files=..., socketio_path=...) -> None:
-        ...
-    
-
+    def __init__(
+        self, socketio_app, wsgi_app=..., static_files=..., socketio_path=...
+    ) -> None: ...
 
 class Middleware(WSGIApp):
     """This class has been renamed to WSGIApp and is now deprecated."""
-    def __init__(self, socketio_app, wsgi_app=..., socketio_path=...) -> None:
-        ...
-    
-
-
+    def __init__(self, socketio_app, wsgi_app=..., socketio_path=...) -> None: ...

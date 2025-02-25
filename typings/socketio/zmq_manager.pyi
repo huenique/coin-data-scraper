@@ -40,12 +40,8 @@ class ZmqManager(PubSubManager):
         while True:
             publisher.send(receiver.recv())
     """
+
     name = ...
-    def __init__(self, url=..., channel=..., write_only=..., logger=...) -> None:
+    def __init__(self, url=..., channel=..., write_only=..., logger=...) -> None: ...
+    def zmq_listen(self):  # -> Generator[Any, Any, NoReturn]:
         ...
-    
-    def zmq_listen(self): # -> Generator[Any, Any, NoReturn]:
-        ...
-    
-
-

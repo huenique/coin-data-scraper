@@ -18,14 +18,22 @@ class PubSubManager(Manager):
     :param channel: The channel name on which the server sends and receives
                     notifications.
     """
+
     name = ...
-    def __init__(self, channel=..., write_only=..., logger=...) -> None:
+    def __init__(self, channel=..., write_only=..., logger=...) -> None: ...
+    def initialize(self):  # -> None:
         ...
-    
-    def initialize(self): # -> None:
-        ...
-    
-    def emit(self, event, data, namespace=..., room=..., skip_sid=..., callback=..., to=..., **kwargs): # -> None:
+    def emit(
+        self,
+        event,
+        data,
+        namespace=...,
+        room=...,
+        skip_sid=...,
+        callback=...,
+        to=...,
+        **kwargs,
+    ):  # -> None:
         """Emit a message to a single client, a room, or all the clients
         connected to the namespace.
 
@@ -35,21 +43,14 @@ class PubSubManager(Manager):
         The parameters are the same as in :meth:`.Server.emit`.
         """
         ...
-    
-    def can_disconnect(self, sid, namespace): # -> bool | None:
-        ...
-    
-    def disconnect(self, sid, namespace=..., **kwargs): # -> None:
-        ...
-    
-    def enter_room(self, sid, namespace, room, eio_sid=...): # -> None:
-        ...
-    
-    def leave_room(self, sid, namespace, room): # -> None:
-        ...
-    
-    def close_room(self, room, namespace=...): # -> None:
-        ...
-    
 
-
+    def can_disconnect(self, sid, namespace):  # -> bool | None:
+        ...
+    def disconnect(self, sid, namespace=..., **kwargs):  # -> None:
+        ...
+    def enter_room(self, sid, namespace, room, eio_sid=...):  # -> None:
+        ...
+    def leave_room(self, sid, namespace, room):  # -> None:
+        ...
+    def close_room(self, room, namespace=...):  # -> None:
+        ...

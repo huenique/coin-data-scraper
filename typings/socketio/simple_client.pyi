@@ -11,10 +11,17 @@ class SimpleClient:
     The positional and keyword arguments given in the constructor are passed
     to the underlying :func:`socketio.Client` object.
     """
-    def __init__(self, *args, **kwargs) -> None:
-        ...
-    
-    def connect(self, url, headers=..., auth=..., transports=..., namespace=..., socketio_path=..., wait_timeout=...): # -> None:
+    def __init__(self, *args, **kwargs) -> None: ...
+    def connect(
+        self,
+        url,
+        headers=...,
+        auth=...,
+        transports=...,
+        namespace=...,
+        socketio_path=...,
+        wait_timeout=...,
+    ):  # -> None:
         """Connect to a Socket.IO server.
 
         :param url: The URL of the Socket.IO server. It can include custom
@@ -45,26 +52,26 @@ class SimpleClient:
                              seconds.
         """
         ...
-    
+
     @property
-    def sid(self): # -> None:
+    def sid(self):  # -> None:
         """The session ID received from the server.
 
         The session ID is not guaranteed to remain constant throughout the life
         of the connection, as reconnections can cause it to change.
         """
         ...
-    
+
     @property
-    def transport(self): # -> Callable[[], Any] | Literal['']:
+    def transport(self):  # -> Callable[[], Any] | Literal['']:
         """The name of the transport currently in use.
 
         The transport is returned as a string and can be one of ``polling``
         and ``websocket``.
         """
         ...
-    
-    def emit(self, event, data=...): # -> None:
+
+    def emit(self, event, data=...):  # -> None:
         """Emit an event to the server.
 
         :param event: The event name. It can be any string. The event names
@@ -81,8 +88,8 @@ class SimpleClient:
         should be used instead.
         """
         ...
-    
-    def call(self, event, data=..., timeout=...): # -> None:
+
+    def call(self, event, data=..., timeout=...):  # -> None:
         """Emit an event to the server and wait for a response.
 
         This method issues an emit and waits for the server to provide a
@@ -101,7 +108,7 @@ class SimpleClient:
                         ``TimeoutError`` exception is raised.
         """
         ...
-    
+
     def receive(self, timeout=...):
         """Wait for an event from the server.
 
@@ -114,16 +121,12 @@ class SimpleClient:
         additional list elements.
         """
         ...
-    
-    def disconnect(self): # -> None:
+
+    def disconnect(self):  # -> None:
         """Disconnect from the server."""
         ...
-    
-    def __enter__(self): # -> Self:
-        ...
-    
-    def __exit__(self, exc_type, exc_val, exc_tb): # -> None:
-        ...
-    
 
-
+    def __enter__(self):  # -> Self:
+        ...
+    def __exit__(self, exc_type, exc_val, exc_tb):  # -> None:
+        ...

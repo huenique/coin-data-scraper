@@ -38,12 +38,18 @@ class KombuManager(PubSubManager):
     :param producer_options: additional keyword arguments to be passed to
                              ``kombu.Producer()``.
     """
+
     name = ...
-    def __init__(self, url=..., channel=..., write_only=..., logger=..., connection_options=..., exchange_options=..., queue_options=..., producer_options=...) -> None:
+    def __init__(
+        self,
+        url=...,
+        channel=...,
+        write_only=...,
+        logger=...,
+        connection_options=...,
+        exchange_options=...,
+        queue_options=...,
+        producer_options=...,
+    ) -> None: ...
+    def initialize(self):  # -> None:
         ...
-    
-    def initialize(self): # -> None:
-        ...
-    
-
-

@@ -17,10 +17,9 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
                       handlers defined in this class. If this argument is
                       omitted, the default namespace is used.
     """
-    def is_asyncio_based(self): # -> Literal[True]:
+    def is_asyncio_based(self):  # -> Literal[True]:
         ...
-    
-    async def trigger_event(self, event, *args): # -> Any | None:
+    async def trigger_event(self, event, *args):  # -> Any | None:
         """Dispatch an event to the proper handler method.
 
         In the most common usage, this method is not overloaded by subclasses,
@@ -31,8 +30,18 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
-    async def emit(self, event, data=..., to=..., room=..., skip_sid=..., namespace=..., callback=..., ignore_queue=...):
+
+    async def emit(
+        self,
+        event,
+        data=...,
+        to=...,
+        room=...,
+        skip_sid=...,
+        namespace=...,
+        callback=...,
+        ignore_queue=...,
+    ):
         """Emit a custom event to one or more connected clients.
 
         The only difference with the :func:`socketio.Server.emit` method is
@@ -42,8 +51,17 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
-    async def send(self, data, to=..., room=..., skip_sid=..., namespace=..., callback=..., ignore_queue=...):
+
+    async def send(
+        self,
+        data,
+        to=...,
+        room=...,
+        skip_sid=...,
+        namespace=...,
+        callback=...,
+        ignore_queue=...,
+    ):
         """Send a message to one or more connected clients.
 
         The only difference with the :func:`socketio.Server.send` method is
@@ -53,8 +71,17 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
-    async def call(self, event, data=..., to=..., sid=..., namespace=..., timeout=..., ignore_queue=...):
+
+    async def call(
+        self,
+        event,
+        data=...,
+        to=...,
+        sid=...,
+        namespace=...,
+        timeout=...,
+        ignore_queue=...,
+    ):
         """Emit a custom event to a client and wait for the response.
 
         The only difference with the :func:`socketio.Server.call` method is
@@ -62,7 +89,7 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
+
     async def enter_room(self, sid, room, namespace=...):
         """Enter a room.
 
@@ -73,7 +100,7 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     async def leave_room(self, sid, room, namespace=...):
         """Leave a room.
 
@@ -84,7 +111,7 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     async def close_room(self, room, namespace=...):
         """Close a room.
 
@@ -95,7 +122,7 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     async def get_session(self, sid, namespace=...):
         """Return the user session for a client.
 
@@ -106,7 +133,7 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     async def save_session(self, sid, session, namespace=...):
         """Store the user session for a client.
 
@@ -117,7 +144,7 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     def session(self, sid, namespace=...):
         """Return the user session for a client with context manager syntax.
 
@@ -126,7 +153,7 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
+
     async def disconnect(self, sid, namespace=...):
         """Disconnect a client.
 
@@ -137,8 +164,6 @@ class AsyncNamespace(base_namespace.BaseServerNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
-
 
 class AsyncClientNamespace(base_namespace.BaseClientNamespace):
     """Base class for asyncio client-side class-based namespaces.
@@ -153,10 +178,9 @@ class AsyncClientNamespace(base_namespace.BaseClientNamespace):
                       handlers defined in this class. If this argument is
                       omitted, the default namespace is used.
     """
-    def is_asyncio_based(self): # -> Literal[True]:
+    def is_asyncio_based(self):  # -> Literal[True]:
         ...
-    
-    async def trigger_event(self, event, *args): # -> Any | None:
+    async def trigger_event(self, event, *args):  # -> Any | None:
         """Dispatch an event to the proper handler method.
 
         In the most common usage, this method is not overloaded by subclasses,
@@ -167,7 +191,7 @@ class AsyncClientNamespace(base_namespace.BaseClientNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     async def emit(self, event, data=..., namespace=..., callback=...):
         """Emit a custom event to the server.
 
@@ -178,7 +202,7 @@ class AsyncClientNamespace(base_namespace.BaseClientNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     async def send(self, data, namespace=..., callback=...):
         """Send a message to the server.
 
@@ -189,7 +213,7 @@ class AsyncClientNamespace(base_namespace.BaseClientNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
+
     async def call(self, event, data=..., namespace=..., timeout=...):
         """Emit a custom event to the server and wait for the response.
 
@@ -198,7 +222,7 @@ class AsyncClientNamespace(base_namespace.BaseClientNamespace):
         associated with the class is used.
         """
         ...
-    
+
     async def disconnect(self):
         """Disconnect a client.
 
@@ -209,6 +233,3 @@ class AsyncClientNamespace(base_namespace.BaseClientNamespace):
         Note: this method is a coroutine.
         """
         ...
-    
-
-

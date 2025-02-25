@@ -16,7 +16,7 @@ class Namespace(base_namespace.BaseServerNamespace):
                       handlers defined in this class. If this argument is
                       omitted, the default namespace is used.
     """
-    def trigger_event(self, event, *args): # -> Any | None:
+    def trigger_event(self, event, *args):  # -> Any | None:
         """Dispatch an event to the proper handler method.
 
         In the most common usage, this method is not overloaded by subclasses,
@@ -25,8 +25,18 @@ class Namespace(base_namespace.BaseServerNamespace):
         having a single method that catches all events is desired.
         """
         ...
-    
-    def emit(self, event, data=..., to=..., room=..., skip_sid=..., namespace=..., callback=..., ignore_queue=...):
+
+    def emit(
+        self,
+        event,
+        data=...,
+        to=...,
+        room=...,
+        skip_sid=...,
+        namespace=...,
+        callback=...,
+        ignore_queue=...,
+    ):
         """Emit a custom event to one or more connected clients.
 
         The only difference with the :func:`socketio.Server.emit` method is
@@ -34,8 +44,17 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
-    def send(self, data, to=..., room=..., skip_sid=..., namespace=..., callback=..., ignore_queue=...):
+
+    def send(
+        self,
+        data,
+        to=...,
+        room=...,
+        skip_sid=...,
+        namespace=...,
+        callback=...,
+        ignore_queue=...,
+    ):
         """Send a message to one or more connected clients.
 
         The only difference with the :func:`socketio.Server.send` method is
@@ -43,8 +62,17 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
-    def call(self, event, data=..., to=..., sid=..., namespace=..., timeout=..., ignore_queue=...):
+
+    def call(
+        self,
+        event,
+        data=...,
+        to=...,
+        sid=...,
+        namespace=...,
+        timeout=...,
+        ignore_queue=...,
+    ):
         """Emit a custom event to a client and wait for the response.
 
         The only difference with the :func:`socketio.Server.call` method is
@@ -52,7 +80,7 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def enter_room(self, sid, room, namespace=...):
         """Enter a room.
 
@@ -61,7 +89,7 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def leave_room(self, sid, room, namespace=...):
         """Leave a room.
 
@@ -70,7 +98,7 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def close_room(self, room, namespace=...):
         """Close a room.
 
@@ -79,7 +107,7 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def get_session(self, sid, namespace=...):
         """Return the user session for a client.
 
@@ -88,7 +116,7 @@ class Namespace(base_namespace.BaseServerNamespace):
         namespace associated with the class is used.
         """
         ...
-    
+
     def save_session(self, sid, session, namespace=...):
         """Store the user session for a client.
 
@@ -97,7 +125,7 @@ class Namespace(base_namespace.BaseServerNamespace):
         namespace associated with the class is used.
         """
         ...
-    
+
     def session(self, sid, namespace=...):
         """Return the user session for a client with context manager syntax.
 
@@ -106,7 +134,7 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def disconnect(self, sid, namespace=...):
         """Disconnect a client.
 
@@ -115,8 +143,6 @@ class Namespace(base_namespace.BaseServerNamespace):
         associated with the class is used.
         """
         ...
-    
-
 
 class ClientNamespace(base_namespace.BaseClientNamespace):
     """Base class for client-side class-based namespaces.
@@ -130,7 +156,7 @@ class ClientNamespace(base_namespace.BaseClientNamespace):
                       handlers defined in this class. If this argument is
                       omitted, the default namespace is used.
     """
-    def trigger_event(self, event, *args): # -> Any | None:
+    def trigger_event(self, event, *args):  # -> Any | None:
         """Dispatch an event to the proper handler method.
 
         In the most common usage, this method is not overloaded by subclasses,
@@ -139,7 +165,7 @@ class ClientNamespace(base_namespace.BaseClientNamespace):
         having a single method that catches all events is desired.
         """
         ...
-    
+
     def emit(self, event, data=..., namespace=..., callback=...):
         """Emit a custom event to the server.
 
@@ -148,7 +174,7 @@ class ClientNamespace(base_namespace.BaseClientNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def send(self, data, room=..., namespace=..., callback=...):
         """Send a message to the server.
 
@@ -157,7 +183,7 @@ class ClientNamespace(base_namespace.BaseClientNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def call(self, event, data=..., namespace=..., timeout=...):
         """Emit a custom event to the server and wait for the response.
 
@@ -166,7 +192,7 @@ class ClientNamespace(base_namespace.BaseClientNamespace):
         associated with the class is used.
         """
         ...
-    
+
     def disconnect(self):
         """Disconnect from the server.
 
@@ -175,6 +201,3 @@ class ClientNamespace(base_namespace.BaseClientNamespace):
         associated with the class is used.
         """
         ...
-    
-
-
