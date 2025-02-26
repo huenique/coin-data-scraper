@@ -2,13 +2,30 @@ import typing
 
 import picologging as logging
 from litestar.logging import BaseLoggingConfig
-from litestar.types.callable_types import GetLogger
+from litestar.types import Logger, Scope
+from litestar.types.callable_types import ExceptionLoggingHandler, GetLogger
+
+
+def custom_exception_handler(
+    logger: typing.Optional[Logger],
+    scope: Scope,
+    exec_info: list[str],
+    traceback: typing.Optional[list[str]] = None,
+) -> None:
+    """Custom handler for logging exceptions."""
+    actual_logger = logging.getLogger("litestar")
+    actual_logger.error(
+        f"Exception occurred: {traceback[-1].replace('\n', ' ') if traceback else exec_info}"
+    )
 
 
 class CustomLoggingConfig(BaseLoggingConfig):
     """Custom logging configuration using picologging with Litestar/Uvicorn formatting."""
 
     log_exceptions: typing.Literal["always", "debug", "never"] = "always"
+    exception_logging_handler: typing.Union[ExceptionLoggingHandler, None] = (
+        custom_exception_handler
+    )
 
     COLORS = {
         "DEBUG": "\033[36m",  # Cyan
