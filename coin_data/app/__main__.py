@@ -17,7 +17,7 @@ def get_csv_files():
     return sorted(glob.glob(os.path.expanduser(os.path.join(data_dir, file_pattern))))
 
 
-@st.cache_data
+@st.cache_data  # type: ignore
 def load_data(file_path: str) -> pl.DataFrame:
     """Loads CSV data with caching, but will be cleared on refresh."""
     df = pl.DataFrame()
