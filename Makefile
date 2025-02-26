@@ -21,5 +21,8 @@ stop-streamlit-prod:
 start-scraping:
 	poetry run python coin_data/exchanges/pumpfun/__main__.py $(filter-out $@,$(MAKECMDGOALS))
 
+start-service:
+	gunicorn -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:8000 coin_data.server.api:app
+
 %:
 	@:

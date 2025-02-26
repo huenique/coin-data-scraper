@@ -80,5 +80,6 @@ async def websocket_proxy(socket: WebSocket[None, None, State]) -> None:
         connected_clients.remove(socket)
 
 
-# Start the Socket.IO connection in the background
-asyncio.create_task(connect_to_socketio_server())
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.create_task(connect_to_socketio_server())
