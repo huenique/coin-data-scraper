@@ -1,6 +1,8 @@
 import glob
+import json
 import os
 from datetime import datetime, timezone
+from typing import Union
 
 import polars as pl
 import pytz
@@ -198,3 +200,75 @@ st.data_editor(
     },
     hide_index=True,
 )
+
+
+def load_ai_report(selected_file: str):
+    """Loads AI-generated market analysis from JSON matching the selected CSV file date."""
+    report_date = (
+        os.path.basename(selected_file).replace("results_", "").replace(".csv", "")
+    )
+    report_path = os.path.join(
+        PUMPFUN_DATA_DIR, "reports", f"report_{report_date}.json"
+    )
+    try:
+        with open(report_path, "r") as file:
+            return json.load(file)
+    except Exception as _e:
+        return None
+
+
+# AI Market Analysis Drawer
+ai_report = load_ai_report(selected_file)
+
+
+def format_value(value: Union[str, dict[str, str], list[str]]) -> str:
+    """Convert values into a readable format."""
+    if isinstance(value, dict):
+        return str(value)  # Convert dictionaries to strings
+    elif isinstance(value, list):
+        return ", ".join(map(str, value))  # Flatten lists into comma-separated strings
+    return str(value)
+
+
+def display_table(
+    title: str, data: Union[dict[str, str], list[str], list[dict[str, str]], str]
+):
+    """Display nested dictionary data in a table format using Polars."""
+    st.subheader(title)
+
+    if isinstance(data, dict):
+        df = pl.DataFrame(
+            {"Key": list(data.keys()), title: [format_value(v) for v in data.values()]},
+            schema={"Key": str, title: str},
+        )
+        st.dataframe(df)  # type: ignore
+    elif isinstance(data, list):
+        if data and isinstance(data[0], dict):
+            # Flatten the list of dictionaries into a proper DataFrame
+            df = pl.DataFrame(
+                [
+                    {k: format_value(v) for k, v in item.items()}
+                    for item in data
+                    if isinstance(item, dict)
+                ]
+            )
+            st.dataframe(df)  # type: ignore
+        else:
+            df = pl.DataFrame(
+                {title: [format_value(item) for item in data]}, schema={title: str}
+            )
+            st.dataframe(df)  # type: ignore
+    else:
+        df = pl.DataFrame({title: [format_value(data)]}, schema={title: str})
+        st.dataframe(df)  # type: ignore
+
+
+if "ai_report" in locals():
+    with st.sidebar.expander("📊 AI Market Analysis", expanded=False):
+        if not ai_report:
+            st.warning("No AI report found for this date.")
+        else:
+            for key, value in ai_report.items():
+                display_table(key.replace("_", " ").title(), value)
+else:
+    st.warning("No AI report found for this date.")

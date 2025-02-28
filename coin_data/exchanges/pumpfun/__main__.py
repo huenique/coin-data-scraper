@@ -19,6 +19,7 @@ from coin_data.exchanges.pumpfun.market_cap import (
     get_token_data,
 )
 from coin_data.exchanges.pumpfun.ohlc import get_ohlc
+from coin_data.exchanges.pumpfun.reports import process_single_csv
 from coin_data.exchanges.pumpfun.token_explorer import (
     PumpfunTokenDataExplorer,
     Transaction,
@@ -136,7 +137,7 @@ def update_results_csv(json_data: list[Transaction], results_file: Path):
                     writer.writerow(dataclasses.asdict(result))
                     csvfile.flush()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             futures = [executor.submit(process_token, token) for token in json_data]
             for future in futures:
                 future.add_done_callback(write_result_callback)
@@ -189,6 +190,10 @@ def main():
 
     json_data = explorer.convert_csv_to_dict(csv_data)
     update_results_csv(json_data, results_file)
+
+    logger.info("🚀 Generating AI reports")
+
+    process_single_csv(str(results_file))
 
 
 if __name__ == "__main__":

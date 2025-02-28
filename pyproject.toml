@@ -18,6 +18,8 @@ litestar = {extras = ["picologging", "standard"], version = "^2.14.0"}
 python-socketio = "^5.12.1"
 aiohttp = "^3.11.13"
 gunicorn = "^23.0.0"
+openai = "^1.65.1"
+tabulate = "^0.9.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9.6"
