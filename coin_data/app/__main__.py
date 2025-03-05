@@ -297,7 +297,7 @@ if "ai_report" in locals():
         else:
             # Display Text Summary as a paragraph
             if "summary" in ai_report:
-                st.subheader("Text Summary")
+                st.subheader("Summary")
                 st.write(ai_report["summary"])  # type: ignore
 
             # Display other sections as tables
