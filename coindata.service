@@ -1,0 +1,12 @@
+[Unit]
+Description=coin data scraper service
+After=network.target
+
+[Service]
+WorkingDirectory=/root/coin-data-scraper
+ExecStart=/root/.local/bin/poetry run gunicorn -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:8000 coin_data.server.api:app
+Restart=always
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target
