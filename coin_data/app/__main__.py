@@ -188,10 +188,37 @@ mcap_columns = [
     "Current Market Cap ($)",
 ]
 
-# Use st.data_editor for proper numeric sorting
+# Define the Neo BullX URL format
+neo_bullx_url_template = "https://neo.bullx.io/terminal?chainId=1399811149&address="
+
+# Identify the correct mint column name dynamically
+mint_col_name = None
+for col in df_filtered.columns:
+    if "mint" in col.lower():  # Detects variations like "Mint Address" or "mint"
+        mint_col_name = col
+        break
+
+if mint_col_name:
+    df_filtered = df_filtered.with_columns(
+        (neo_bullx_url_template + pl.col(mint_col_name)).alias("Mint Address")
+    )
+else:
+    st.error("Error: Mint Address column not found in DataFrame.")
+    st.stop()
+
+# Identify the correct mint column name dynamically
+mint_col_name = None
+for col in df_filtered.columns:
+    if "mint" in col.lower():  # Detects variations like "Mint Address" or "mint"
+        mint_col_name = col
+        break
+
 st.data_editor(
     df_filtered.select(display_columns).to_pandas(),
     column_config={
+        "Mint Address": st.column_config.LinkColumn(
+            "Mint Address",
+        ),
         "Image": st.column_config.ImageColumn("Image"),
         "Telegram": st.column_config.LinkColumn("Telegram", width="medium"),
         "Twitter": st.column_config.LinkColumn("Twitter", width="medium"),
