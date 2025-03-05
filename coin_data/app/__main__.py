@@ -295,7 +295,14 @@ if "ai_report" in locals():
         if not ai_report:
             st.warning("No AI report found for this date.")
         else:
+            # Display Text Summary as a paragraph
+            if "summary" in ai_report:
+                st.subheader("Text Summary")
+                st.write(ai_report["summary"])  # type: ignore
+
+            # Display other sections as tables
             for key, value in ai_report.items():
-                display_table(key.replace("_", " ").title(), value)
+                if key != "summary":  # Skip text summary for table rendering
+                    display_table(key.replace("_", " ").title(), value)
 else:
     st.warning("No AI report found for this date.")
