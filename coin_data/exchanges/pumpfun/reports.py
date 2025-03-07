@@ -3,6 +3,7 @@ import glob
 import json
 import os
 import re
+from dataclasses import dataclass
 
 import openai
 import polars as pl
@@ -96,7 +97,14 @@ def generate_report(data_markdown: str, template: str) -> str | None:
         return None
 
 
-def process_csv_file(csv_file: str) -> dict[str, str]:
+@dataclass
+class ProcessCsvResponse:
+    status: str
+    message: str | None = None
+    report_path: str | None = None
+
+
+def process_csv_file(csv_file: str, report_file: str) -> ProcessCsvResponse:
     """
     Processes a single CSV file and generates a cleaned market report in JSON format.
 
@@ -114,10 +122,10 @@ def process_csv_file(csv_file: str) -> dict[str, str]:
         report_content = generate_report(data_markdown, REPORT_TEMPLATE)
         if not report_content:
             logger.error(f"Failed to generate report for {csv_file}.")
-            return {
-                "status": "error",
-                "message": f"Failed to generate report for {csv_file}",
-            }
+
+            return ProcessCsvResponse(
+                status="error", message=f"Failed to generate report for {csv_file}"
+            )
 
         # Convert cleaned string to actual JSON for validation
         try:
@@ -133,32 +141,25 @@ def process_csv_file(csv_file: str) -> dict[str, str]:
                 json_data = json.loads(fixed_content)
                 logger.warning(f"Auto-fixed minor JSON issue in {csv_file}")
             except json.JSONDecodeError:
-                return {
-                    "status": "error",
-                    "message": "AI returned invalid JSON format",
-                }
+                return ProcessCsvResponse(
+                    status="error", message="AI returned invalid JSON format"
+                )
 
-        report_filename = (
-            os.path.basename(csv_file)
-            .replace("results_", "report_")
-            .replace(".csv", ".json")
-        )
+        report_filename = os.path.basename(report_file)
         report_path = os.path.join(OUTPUT_DIR, report_filename)
 
-        with open(report_path, "w", encoding="utf-8") as report_file:
-            json.dump(
-                json_data, report_file, indent=4
-            )  # Save as properly formatted JSON
+        with open(report_path, "w", encoding="utf-8") as ai_report:
+            json.dump(json_data, ai_report, indent=4)
 
         logger.info(f"Report generated and saved to: {report_path}")
-        return {"status": "success", "report_path": report_path}
+        return ProcessCsvResponse(status="success", report_path=report_path)
 
     except Exception as e:
         logger.error(f"Error processing CSV file {csv_file}: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        return ProcessCsvResponse(status="error", message=str(e))
 
 
-def generate_reports() -> list[dict[str, str]]:
+def generate_reports() -> list[ProcessCsvResponse]:
     """
     Processes all CSV files matching `results_*.csv` and generates reports using multithreading.
 
@@ -168,15 +169,25 @@ def generate_reports() -> list[dict[str, str]]:
     csv_files = glob.glob(os.path.join(DATA_DIR, "results_*.csv"))
 
     if not csv_files:
-        return [{"status": "error", "message": "No CSV files found."}]
+        return [ProcessCsvResponse(status="error", message="No CSV files found.")]
 
-    results: list[dict[str, str]] = []
-
+    results: list[ProcessCsvResponse] = []
     max_workers = min(MAX_WORKERS, (os.cpu_count() or 1) * 2)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        report_files = [
+            os.path.join(
+                OUTPUT_DIR,
+                os.path.basename(csv)
+                .replace("results_", "report_")
+                .replace(".csv", ".json"),
+            )
+            for csv in csv_files
+        ]
+
         future_to_csv = {
-            executor.submit(process_csv_file, csv): csv for csv in csv_files
+            executor.submit(process_csv_file, csv, report): csv
+            for csv, report in zip(csv_files, report_files)
         }
 
         for future in concurrent.futures.as_completed(future_to_csv):
@@ -185,12 +196,12 @@ def generate_reports() -> list[dict[str, str]]:
                 results.append(result)
             except Exception as e:
                 logger.error(f"Error in report generation: {str(e)}")
-                results.append({"status": "error", "message": str(e)})
+                results.append(ProcessCsvResponse(status="error", message=str(e)))
 
     return results
 
 
-def process_single_csv(csv_file: str) -> dict[str, str]:
+def process_single_csv(csv_file: str, report_file: str) -> ProcessCsvResponse:
     """
     Public API function to process a single CSV file.
 
@@ -201,9 +212,9 @@ def process_single_csv(csv_file: str) -> dict[str, str]:
         dict: Status of the processing and the generated report file path.
     """
     if not os.path.exists(csv_file):
-        return {"status": "error", "message": f"File not found: {csv_file}"}
+        return ProcessCsvResponse(status="error", message=f"File not found: {csv_file}")
 
-    return process_csv_file(csv_file)
+    return process_csv_file(csv_file, report_file)
 
 
 # Smoke test: Run this script standalone
@@ -213,13 +224,19 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         csv_file = sys.argv[1]
         logger.info(f"Processing single CSV file: {csv_file}")
-        result = process_single_csv(csv_file)
+        report_file = (
+            os.path.basename(csv_file)
+            .replace("results_", "report_")
+            .replace(".csv", ".json")
+        )
+
+        result = process_single_csv(csv_file, report_file)
         logger.info(result)
     else:
         logger.info("Starting market report generation...")
         results = generate_reports()
-        if not results or (len(results) == 1 and results[0]["status"] == "error"):
-            logger.info("No reports generated.")
+        if not results or all(result.status == "error" for result in results):
+            logger.error("No reports generated.")
         else:
             logger.info("Reports generated successfully:")
             for result in results:

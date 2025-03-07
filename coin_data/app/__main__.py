@@ -1,13 +1,13 @@
 import glob
 import json
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Union
 
+import altair as alt
 import polars as pl
 import pytz
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh  # type: ignore
 
 from coin_data.config import PUMPFUN_DATA_DIR, PUMPFUN_RESULTS_PATTERN
 
@@ -28,6 +28,37 @@ def load_data(file_path: str) -> pl.DataFrame:
     except pl.exceptions.NoDataError as e:
         st.error(f"Error loading data: {e}")
     return df
+
+
+@st.cache_data  # type: ignore
+def build_graduated_tokens_data() -> pl.DataFrame:
+    """Return a Polars DataFrame with columns:
+    date, daily_count, cumulative_count
+    """
+    files = get_csv_files()
+    data: list[dict[str, date | int]] = []
+
+    for f in files:
+        # Extract date from filename: "results_YYYY-MM-DD.csv"
+        file_date_str = os.path.basename(f).replace("results_", "").replace(".csv", "")
+        # Convert string to a date object
+        file_date = datetime.strptime(file_date_str, "%Y-%m-%d").date()
+
+        # Load the CSV
+        df_f = load_data(f)
+        daily_count = df_f.height  # number of rows
+
+        data.append({"date": file_date, "daily_count": daily_count})
+
+    # Build a Polars DataFrame and sort by date
+    df_chart = pl.DataFrame(data).sort("date")
+
+    # Compute the cumulative sum of daily_count
+    df_chart = df_chart.with_columns(
+        (pl.col("daily_count").cum_sum()).alias("cumulative_count")
+    )
+
+    return df_chart
 
 
 def search_filter(df: pl.DataFrame, query: str) -> pl.DataFrame:
@@ -306,3 +337,39 @@ if "ai_report" in locals():
                     display_table(key.replace("_", " ").title(), value)
 else:
     st.warning("No AI report found for this date.")
+
+# Build daily/cumulative data
+df_chart = build_graduated_tokens_data()
+
+# Convert to Pandas for Altair
+df_chart_pd = df_chart.to_pandas()
+
+# Create a bar chart for daily counts
+bars = (
+    alt.Chart(df_chart_pd)  # type: ignore
+    .mark_bar(color="steelblue")
+    .encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y("daily_count:Q", title="Daily Graduated Tokens"),
+    )
+)
+
+# Create a line chart for the cumulative counts
+line = (
+    alt.Chart(df_chart_pd)# type: ignore
+    .mark_line(color="red")
+    .encode(
+        x="date:T",
+        y=alt.Y("cumulative_count:Q", title="Cumulative Graduated Tokens"),
+    )
+)
+
+# Layer the bar and line charts together, using independent y-scales
+combined_chart = (
+    alt.layer(bars, line)# type: ignore
+    .resolve_scale(y="independent")
+    .properties(width="container", height=400)
+)
+
+st.subheader("Daily & Cumulative Graduated Tokens")
+st.altair_chart(combined_chart, use_container_width=True)

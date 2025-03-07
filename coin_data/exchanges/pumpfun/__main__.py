@@ -2,10 +2,13 @@ import argparse
 import concurrent.futures
 import csv
 import dataclasses
+import json
 import os
 import threading
 import time
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 from coin_data.config import PUMPFUN_DATA_DIR
 from coin_data.exchanges.pumpfun.coin_meta import Token, extract_coin_meta
@@ -19,12 +22,15 @@ from coin_data.exchanges.pumpfun.market_cap import (
     get_token_data,
 )
 from coin_data.exchanges.pumpfun.ohlc import get_ohlc
-from coin_data.exchanges.pumpfun.reports import process_single_csv
+from coin_data.exchanges.pumpfun.reports import ProcessCsvResponse, process_single_csv
 from coin_data.exchanges.pumpfun.token_explorer import (
     PumpfunTokenDataExplorer,
     Transaction,
 )
 from coin_data.logging import logger
+from coin_data.utils.email import send_email
+
+load_dotenv()
 
 # Exponential backoff settings
 MAX_RETRIES = 3
@@ -146,32 +152,95 @@ def update_results_csv(json_data: list[Transaction], results_file: Path):
     logger.info(f"📝 Results written to {results_file}")
 
 
-def main():
+def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Retrieve and process Pumpfun token activity."
     )
-
     parser.add_argument(
         "--date",
         type=str,
         help="Custom date in YYYY-MM-DD format (default: yesterday)",
     )
-
-    args = parser.parse_args()
-
-    explorer = PumpfunTokenDataExplorer()
-
-    if args.date:
-        yesterday_start, yesterday_end = explorer.get_day_timestamps(args.date)
-    else:
-        yesterday_start, yesterday_end = explorer.calculate_yesterday_timestamps()
-
-    logger.info(
-        f"🚀 Retrieving token activity from {yesterday_start} to {yesterday_end}"
+    parser.add_argument(
+        "--send-email",
+        action="store_true",
+        help="Send email with the AI report",
     )
 
-    csv_data = explorer.retrieve_token_activity(yesterday_start, yesterday_end)
+    return parser.parse_args()
 
+
+def get_date_range(explorer: PumpfunTokenDataExplorer, date_arg: str | None):
+    if date_arg:
+        return explorer.get_day_timestamps(date_arg)
+    return explorer.calculate_yesterday_timestamps()
+
+
+def write_file(file_path: Path, data: str) -> None:
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(data)
+
+
+def get_valid_report_path(result: ProcessCsvResponse, results_file: Path) -> str | None:
+    if (
+        result.status != "success"
+        or not result.report_path
+        or not os.path.exists(result.report_path)
+    ):
+        logger.error(f"❌ Failed to generate report for {results_file}")
+
+        if result.message:
+            logger.error(result.message)
+
+        return None
+
+    return result.report_path
+
+
+def load_recipients(csv_path: str) -> list[str]:
+    recipients: list[str] = []
+
+    with open(csv_path, "r", encoding="utf-8") as f:
+        next(f)  # Skip header
+        for line in f:
+            recipients.append(line.strip())
+
+    return recipients
+
+
+def load_email_config() -> dict[str, str] | None:
+    required = ["SMTP_SERVER", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD"]
+    config: dict[str, str] = {}
+    missing_keys: list[str] = []
+
+    for key in required:
+        value = os.getenv(key)
+        if value is None:
+            missing_keys.append(key)
+        else:
+            config[key] = value
+
+    if missing_keys:
+        logger.error(f"❌ Missing environment variables: {', '.join(missing_keys)}")
+        return None
+
+    return config
+
+
+def load_report_body(report_path: str) -> str:
+    with open(report_path, "r", encoding="utf-8") as f:
+        report_json = json.load(f)
+    return report_json.get("summary", "")
+
+
+def main():
+    args = parse_arguments()
+    explorer = PumpfunTokenDataExplorer()
+
+    start_ts, end_ts = get_date_range(explorer, args.date)
+    logger.info(f"🚀 Retrieving token activity from {start_ts} to {end_ts}")
+
+    csv_data = explorer.retrieve_token_activity(start_ts, end_ts)
     output_dir = PUMPFUN_DATA_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -180,20 +249,54 @@ def main():
         if args.date
         else time.strftime("%Y-%m-%d", time.gmtime(time.time() - 86400))
     )
-
     activities_file = output_dir / f"activities_{date_suffix}.csv"
     results_file = output_dir / f"results_{date_suffix}.csv"
 
-    # Write activities file
-    with open(activities_file, "w") as f:
-        f.write(csv_data)
-
+    write_file(activities_file, csv_data)
     json_data = explorer.convert_csv_to_dict(csv_data)
     update_results_csv(json_data, results_file)
 
     logger.info("🚀 Generating AI reports")
+    report_file = (
+        os.path.basename(results_file)
+        .replace("results_", "report_")
+        .replace(".csv", ".json")
+    )
 
-    process_single_csv(str(results_file))
+    result = process_single_csv(str(results_file), report_file)
+    report_path = get_valid_report_path(result, results_file)
+    if not report_path:
+        return
+
+    logger.info(f"📊 AI report generated: {report_path}")
+
+    email_config = load_email_config()
+    if not email_config:
+        return
+
+    recipients = load_recipients("emails.csv")
+    body = load_report_body(report_path)
+
+    if not args.send_email:
+        logger.info("📧 Skipping email send")
+        return
+
+    logger.info("📧 Sending email...")
+
+    email_response = send_email(
+        smtp_server=email_config["SMTP_SERVER"],
+        smtp_port=int(email_config["SMTP_PORT"]),
+        username=email_config["SMTP_USERNAME"],
+        password=email_config["SMTP_PASSWORD"],
+        subject=f"Pumpfun Token Activity Report ({date_suffix})",
+        body=body,
+        recipients=recipients,
+    )
+
+    if email_response.success:
+        logger.info("📧 Email sent successfully!")
+    else:
+        logger.error(f"❌ Failed to send email: {email_response.message}")
 
 
 if __name__ == "__main__":
