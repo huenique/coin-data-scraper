@@ -95,6 +95,18 @@ To start the data scraping process:
 make start-scraping
 ```
 
+Use `--help` to see available options:
+
+```sh
+make start-scraping --- --help
+```
+
+Extract token data from a specified date:
+
+```sh
+make start-scraping --- --date 2025-01-01
+```
+
 ## Setting Up Systemd Service
 
 To configure the API server to run as a background service:
