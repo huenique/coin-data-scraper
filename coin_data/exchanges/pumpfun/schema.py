@@ -3,21 +3,23 @@ from typing import Any
 
 
 @dataclass
+class TokensInfo:
+    token: str
+    token_account: str
+    amount: float
+
+
+@dataclass
 class TotalVolume24h:
     total_volume_24h: int
     total_volume_change_24h: float
     total_trades_24h: int
     total_trades_change_24h: float
-    token1: str
-    token2: str
-    token1_account: str
-    token2_account: str
-    token1_amount: float
-    token2_amount: float
     tvl: float
     create_tx_hash: str | None = None
     create_block_time: int | None = None
     creator: str | None = None
+    tokens_info: TokensInfo | None = None
 
 
 @dataclass
